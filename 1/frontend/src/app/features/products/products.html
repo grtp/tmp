@@ -1,0 +1,185 @@
+<header class="topbar">
+  <div class="title">
+    <span class="mark">db</span>
+    <strong>商品マスタ</strong>
+  </div>
+  <div class="account">
+    @if (user(); as u) {
+      <span class="who">{{ u.displayName }}</span>
+    }
+    <button class="ghost" (click)="logout()">サインアウト</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- Toolbar: search, page size, add, import -->
+  <div class="toolbar">
+    <div class="search">
+      <input
+        type="search"
+        placeholder="コード・名称・分類で検索"
+        [value]="q()"
+        (input)="q.set($any($event.target).value)"
+        (keydown.enter)="search()"
+      />
+      <button class="ghost" (click)="search()">検索</button>
+    </div>
+
+    <div class="spacer"></div>
+
+    <label class="pagesize">
+      表示件数
+      <select [value]="limit()" (change)="changeLimit($any($event.target).value)">
+        <option [value]="50">50</option>
+        <option [value]="100">100</option>
+        <option [value]="200">200</option>
+        <option [value]="500">500</option>
+      </select>
+    </label>
+
+    <label class="import ghost">
+      取込（CSV / JSON）
+      <input type="file" accept=".csv,.json" (change)="onFile($event)" hidden />
+    </label>
+
+    <button class="primary" (click)="openNew()">＋ 新規追加</button>
+  </div>
+
+  @if (error()) {
+    <p class="banner err" role="alert">{{ error() }}</p>
+  }
+
+  <!-- Import result summary -->
+  @if (importResult(); as r) {
+    <div class="banner" [class.err]="r.inserted === 0" role="status">
+      <strong>{{ r.inserted }} 件を追加しました。</strong>
+      @if (r.failed.length) {
+        <span>{{ r.failed.length }} 件のエラー:</span>
+        <ul>
+          @for (f of r.failed; track f.row) {
+            <li>{{ f.row }} 行目: {{ f.reason }}</li>
+          }
+        </ul>
+      }
+      <button class="ghost sm" (click)="dismissImport()">閉じる</button>
+    </div>
+  }
+
+  <!-- Data table -->
+  <div class="tablecard">
+    <table>
+      <thead>
+        <tr>
+          <th class="num">ID</th>
+          <th>コード</th>
+          <th>名称</th>
+          <th>分類</th>
+          <th class="num">価格</th>
+          <th class="num">在庫</th>
+          <th>更新日時</th>
+          <th class="actions">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (p of rows(); track p.id) {
+          <tr>
+            <td class="num muted">{{ p.id }}</td>
+            <td class="code">{{ p.code }}</td>
+            <td>{{ p.name }}</td>
+            <td>{{ p.category }}</td>
+            <td class="num">{{ p.price | number }}</td>
+            <td class="num">{{ p.stock | number }}</td>
+            <td class="muted">{{ p.updatedAt | date: 'yyyy/MM/dd HH:mm' }}</td>
+            <td class="actions">
+              <button class="link" (click)="openEdit(p)">編集</button>
+              <button class="link danger" (click)="confirmDelete(p)">削除</button>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="8" class="empty">
+              {{ loading() ? '読み込み中…' : 'データがありません' }}
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pager">
+    <span class="count">
+      {{ total() | number }} 件中 {{ from() | number }}–{{ to() | number }} 件
+    </span>
+    <div class="nav">
+      <button class="ghost" [disabled]="!canPrev()" (click)="prevPage()">前へ</button>
+      <button class="ghost" [disabled]="!canNext()" (click)="nextPage()">次へ</button>
+    </div>
+  </div>
+</main>
+
+<!-- Add / edit dialog -->
+@if (editing(); as e) {
+  <div class="overlay" (click)="closeEditor()">
+    <form
+      class="dialog"
+      (click)="$event.stopPropagation()"
+      (submit)="$event.preventDefault(); saveEditor()"
+    >
+      <h2>{{ e.id === null ? '新規追加' : '編集' }}</h2>
+
+      <label class="field">
+        <span>コード <em>*</em></span>
+        <input
+          [value]="draft().code"
+          (input)="patch('code', $any($event.target).value)"
+        />
+      </label>
+      <label class="field">
+        <span>名称 <em>*</em></span>
+        <input
+          [value]="draft().name"
+          (input)="patch('name', $any($event.target).value)"
+        />
+      </label>
+      <label class="field">
+        <span>分類</span>
+        <input
+          [value]="draft().category"
+          (input)="patch('category', $any($event.target).value)"
+        />
+      </label>
+      <div class="row2">
+        <label class="field">
+          <span>価格</span>
+          <input
+            type="number"
+            min="0"
+            [value]="draft().price"
+            (input)="patch('price', +$any($event.target).value)"
+          />
+        </label>
+        <label class="field">
+          <span>在庫</span>
+          <input
+            type="number"
+            min="0"
+            [value]="draft().stock"
+            (input)="patch('stock', +$any($event.target).value)"
+          />
+        </label>
+      </div>
+
+      @if (editorError()) {
+        <p class="error" role="alert">{{ editorError() }}</p>
+      }
+
+      <div class="dialog-actions">
+        <button type="button" class="ghost" (click)="closeEditor()">キャンセル</button>
+        <button type="submit" class="primary" [disabled]="saving()">
+          {{ saving() ? '保存中…' : '保存' }}
+        </button>
+      </div>
+    </form>
+  </div>
+}

@@ -1,0 +1,9 @@
+# backend
+backend/data.db
+backend/data.db-*
+backend/.env
+# frontend
+frontend/node_modules/
+frontend/dist/
+frontend/out-tsc/
+frontend/.angular/

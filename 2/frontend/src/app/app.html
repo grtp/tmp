@@ -1,0 +1,19 @@
+@if (auth.me(); as me) {
+  <header class="app-header">
+    <a routerLink="/" class="app-brand">
+      <span class="brand-mark">◫</span>
+      <span class="brand-name">table-maint</span>
+    </a>
+    <nav class="app-nav">
+      <a routerLink="/table_maint">テーブルメンテナンス</a>
+    </nav>
+    <div class="app-user">
+      <span class="user-name">{{ me.displayName }}</span>
+      <span class="role-badge" [class]="'role-badge ' + me.role">{{ me.role }}</span>
+      <button class="ghost" (click)="logout()">ログアウト</button>
+    </div>
+  </header>
+}
+<main class="app-main" [class.bare]="!auth.me()">
+  <router-outlet />
+</main>

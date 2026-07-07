@@ -1,0 +1,59 @@
+# 権限テーブル自身をメタデータ駆動テーブルとして登録する。
+# 専用の管理画面を作らず、既存の table_maint 画面でロール管理を行うため。
+schema: dbo
+table: app_user_roles
+displayName: 利用者権限
+description: |
+  ADのobjectGUIDをキーとした利用者ロール。初回ログイン時に user で自動登録される。
+  昇格・降格はこの画面で admin が行う。
+
+primaryKey: [object_guid]
+
+permissions:
+  read:  [admin]
+  write: [admin]
+
+# ガード(汎用CRUDに対する追加制約):
+guards:
+  denyInsert: true        # 行追加禁止(登録はログイン時の自動UPSERTのみ)
+  denyDelete: false       # 削除は可(退職者の掃除)
+  protect:
+    # 最後の admin を消滅させる操作(role変更・行削除)を 409 で拒否する。
+    - kind: lastRowMatching
+      column: role
+      value: admin
+
+columns:
+  - name: object_guid
+    displayName: objectGUID
+    type: uuid
+    readonly: true
+
+  - name: username
+    displayName: アカウント
+    type: string
+    readonly: true        # ログイン時にADから同期。手編集させない。
+    searchable: true
+
+  - name: display_name
+    displayName: 表示名
+    type: string
+    readonly: true
+    nullable: true
+    searchable: true
+
+  - name: role
+    displayName: ロール
+    type: string
+    required: true
+    enum: [admin, maintainer, user]   # フロントはセレクトボックスを描画
+
+  - name: updated_at
+    displayName: 更新日時
+    type: datetime
+    readonly: true
+
+  - name: updated_by
+    displayName: 更新者
+    type: string
+    readonly: true

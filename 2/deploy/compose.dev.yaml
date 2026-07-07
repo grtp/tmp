@@ -1,0 +1,59 @@
+# deploy/compose.dev.yaml
+# 開発用: SQL Server(+初期化) と、必要なら OpenLDAP を立てる。
+# backend / frontend は反復速度優先でホスト側で起動する:
+#   backend : cd backend && LDAP_MOCK=true go run ./cmd/server
+#   frontend: cd frontend && npm start   (proxy.conf.json で /api -> :8080)
+#
+# 起動:  podman compose -f deploy/compose.dev.yaml up -d
+# 破棄:  podman compose -f deploy/compose.dev.yaml down -v
+
+services:
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: tm-mssql
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "DevPassw0rd!"
+      MSSQL_PID: Developer
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P 'DevPassw0rd!' -Q 'SELECT 1' -b"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # 初期化はワンショットコンテナで行う(mssql イメージに initdb 機構がないため)。
+  mssql-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: tm-mssql-init
+    depends_on:
+      mssql:
+        condition: service_healthy
+    volumes:
+      - ./initdb:/initdb:ro
+    entrypoint: >
+      /opt/mssql-tools18/bin/sqlcmd -C -S mssql -U sa -P 'DevPassw0rd!'
+      -i /initdb/01_init.sql -b
+    restart: "no"
+
+  # LDAP実物で検証したいときだけ: --profile ldap を付けて起動。
+  # 通常は LDAP_MOCK=true で足りる。
+  ldap:
+    image: bitnami/openldap:2.6
+    container_name: tm-ldap
+    profiles: [ldap]
+    environment:
+      LDAP_ADMIN_USERNAME: admin
+      LDAP_ADMIN_PASSWORD: adminpassword
+      LDAP_ROOT: dc=example,dc=local
+      LDAP_CUSTOM_LDIF_DIR: /ldifs
+    ports:
+      - "1389:1389"
+    volumes:
+      - ./ldap:/ldifs
+
+volumes:
+  mssql-data:

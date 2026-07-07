@@ -1,0 +1,550 @@
+openapi: 3.0.3
+info:
+  title: table-maint API
+  version: 1.0.0
+  description: |
+    社内LAN向けテーブルメンテナンスツールのAPI。
+
+    ## 認証
+    LDAP(AD) bind 認証。成功時に JWT を httpOnly cookie (`session`) で発行する。
+    以降のリクエストは cookie により認証される(ヘッダ不要)。
+
+    ## 認可(ロール)
+    | ロール | 取得方法 | 権限 |
+    |---|---|---|
+    | guest      | 未ログイン | 何もできない(401) |
+    | user       | 初回ログイン時に自動登録 | テーブル閲覧 |
+    | maintainer | admin が昇格 | 閲覧 + 追加/編集/削除 |
+    | admin      | admin が昇格(初回は手動SQL) | maintainer + 権限管理 |
+
+    テーブルごとの read/write 可能ロールはメタデータ(YAML)側で定義され、
+    `GET /tables` は呼び出しユーザーが read 可能なものだけを返す。
+
+    ## エラー
+    すべてのエラーは `Error` スキーマで返る。認証切れは一律 401、
+    権限不足は 403、メタデータに存在しないテーブルは 404。
+
+servers:
+  - url: /api/v1
+
+tags:
+  - name: auth
+    description: LDAP認証とセッション
+  - name: tables
+    description: メタデータ駆動のテーブル操作
+
+paths:
+  # ---------------------------------------------------------------- auth
+  /auth/login:
+    post:
+      tags: [auth]
+      operationId: login
+      summary: LDAP(AD) 認証してセッション cookie を発行
+      description: |
+        search-then-bind で認証する。成功時:
+        1. objectGUID を正規化 (adguid.GUID)
+        2. 権限テーブルへ UPSERT(初回は role=user で自動登録、既存なら表示名を最新化。role は変更しない)
+        3. role を claim に含む JWT を httpOnly cookie で発行
+      security: []          # このエンドポイントのみ未認証で呼べる
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: 認証成功。Set-Cookie でセッションを発行。
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: session=eyJhbGciOi...; Path=/; HttpOnly; SameSite=Lax
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+        '401':
+          description: 資格情報が不正(ユーザー不存在・パスワード誤りを区別しない)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: LDAP サーバーに到達できない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      operationId: logout
+      summary: セッション cookie を失効させる
+      responses:
+        '204':
+          description: ログアウト完了(cookie を Max-Age=0 で上書き)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/me:
+    get:
+      tags: [auth]
+      operationId: getMe
+      summary: 現在のユーザーとロールを返す
+      description: フロントの起動時・トップページ表示時に呼び、ログイン状態を判定する。
+      responses:
+        '200':
+          description: ログイン中のユーザー情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # -------------------------------------------------------------- tables
+  /tables:
+    get:
+      tags: [tables]
+      operationId: listTables
+      summary: 閲覧可能なテーブルの一覧
+      description: |
+        ビルドに組み込まれたメタデータのうち、呼び出しユーザーのロールで
+        read 可能なテーブルだけを返す。フロントのメニュー描画に使う。
+      responses:
+        '200':
+          description: テーブル一覧
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [tables]
+                properties:
+                  tables:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TableSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /tables/{name}/meta:
+    get:
+      tags: [tables]
+      operationId: getTableMeta
+      summary: テーブルの列定義(フロントの動的描画用)
+      parameters:
+        - $ref: '#/components/parameters/TableName'
+      responses:
+        '200':
+          description: 列定義と自ユーザーの操作可否
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TableMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /tables/{name}/rows:
+    get:
+      tags: [tables]
+      operationId: listRows
+      summary: 行データの取得(ページネーション)
+      parameters:
+        - $ref: '#/components/parameters/TableName'
+        - name: limit
+          in: query
+          description: |
+            1回のフェッチ件数(1〜200)。フロントの粒度選択(10/20/50/100/200)は
+            UI側の規約であり、APIは範囲内の任意値を受ける。
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: q
+          in: query
+          description: 簡易検索。検索対象列はメタデータの searchable 指定に従う。
+          schema:
+            type: string
+        - name: orderBy
+          in: query
+          description: ソート列。メタデータに存在する列名のみ許可(SQLインジェクション防止)。
+          schema:
+            type: string
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+      responses:
+        '200':
+          description: |
+            行データ。`total` は検索条件適用後の総件数で、
+            無限スクロールの「次があるか」判定に使う。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RowPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /tables/{name}/rows/batch:
+    post:
+      tags: [tables]
+      operationId: applyBatch
+      summary: 追加・更新・削除を1トランザクションで一括反映
+      description: |
+        フロントの編集バッファ([反映]→確認モーダル→[確定])の差分を
+        まとめて受け取り、**単一トランザクション**で適用する。
+        1件でも失敗すれば全体をロールバックし 409 を返す(部分成功なし)。
+
+        maintainer / admin のみ呼び出し可能(メタデータの write 定義に従う)。
+
+        楽観ロック: updates/deletes には取得時の行バージョン(`rowversion`
+        列を持つテーブルの場合)を含められる。不一致なら 409 conflict。
+      parameters:
+        - $ref: '#/components/parameters/TableName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchRequest'
+      responses:
+        '200':
+          description: 全件反映成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: |
+            制約違反・楽観ロック不一致などで全体ロールバックした。
+            `details` にどの操作が原因かを含める。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchError'
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: session
+      description: JWT を格納した httpOnly cookie
+
+  parameters:
+    TableName:
+      name: name
+      in: path
+      required: true
+      description: メタデータで定義されたテーブル識別子(YAML のファイル名/キー)
+      schema:
+        type: string
+        pattern: '^[a-z][a-z0-9_]{0,63}$'
+      example: products
+
+  responses:
+    Unauthorized:
+      description: 未ログインまたはセッション失効
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: ロール不足(read/write 権限なし)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: メタデータに存在しないテーブル
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    BadRequest:
+      description: バリデーションエラー(不正な列名・型不一致など)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    # ------------------------------------------------------------ common
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: 機械可読なエラーコード
+          enum:
+            - invalid_credentials
+            - unauthorized
+            - forbidden
+            - not_found
+            - validation_failed
+            - conflict
+            - ldap_unavailable
+            - internal
+        message:
+          type: string
+          description: 人間向けメッセージ(日本語)
+        details:
+          type: object
+          additionalProperties: true
+          description: エラー種別ごとの補足情報
+
+    Role:
+      type: string
+      enum: [admin, maintainer, user]
+      description: guest は未認証状態を指すため API 上には現れない(401 になる)
+
+    # -------------------------------------------------------------- auth
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          description: sAMAccountName
+          example: yamada.taro
+        password:
+          type: string
+          format: password
+          minLength: 1
+
+    Me:
+      type: object
+      required: [username, displayName, role]
+      properties:
+        username:
+          type: string
+          example: yamada.taro
+        displayName:
+          type: string
+          example: 山田 太郎
+        email:
+          type: string
+          example: yamada.taro@example.co.jp
+        role:
+          $ref: '#/components/schemas/Role'
+
+    # ------------------------------------------------------------ tables
+    TableSummary:
+      type: object
+      required: [name, displayName, writable]
+      properties:
+        name:
+          type: string
+          example: products
+        displayName:
+          type: string
+          example: 商品マスタ
+        description:
+          type: string
+        writable:
+          type: boolean
+          description: 呼び出しユーザーが write 可能か(メニューのバッジ表示等に使用)
+
+    TableMeta:
+      type: object
+      required: [name, displayName, primaryKey, writable, columns]
+      properties:
+        name:
+          type: string
+        displayName:
+          type: string
+        primaryKey:
+          type: array
+          description: 複合主キー対応のため配列
+          items:
+            type: string
+          example: [id]
+        writable:
+          type: boolean
+        hasRowVersion:
+          type: boolean
+          description: rowversion 列を持ち楽観ロック可能か
+        columns:
+          type: array
+          items:
+            $ref: '#/components/schemas/ColumnMeta'
+
+    ColumnMeta:
+      type: object
+      required: [name, type, nullable, readonly]
+      properties:
+        name:
+          type: string
+          example: price
+        displayName:
+          type: string
+          example: 単価
+        type:
+          type: string
+          description: フロントの入力コントロール選択に使う正規化済み型
+          enum: [string, int, decimal, bool, date, datetime, uuid]
+        nullable:
+          type: boolean
+        readonly:
+          type: boolean
+          description: IDENTITY 列・計算列・rowversion 等。true なら編集UI無効。
+        required:
+          type: boolean
+          default: false
+        maxLength:
+          type: integer
+          description: string 型のときの最大長(nvarchar(n) 由来)
+        min:
+          type: number
+        max:
+          type: number
+        searchable:
+          type: boolean
+          default: false
+          description: q パラメータの検索対象か
+        enum:
+          type: array
+          items: {}
+          description: 許容値リスト。存在する場合フロントはセレクトボックスを描画。
+
+    Row:
+      type: object
+      additionalProperties: true
+      description: |
+        列名→値のマップ。値の型は ColumnMeta.type に従う。
+        date/datetime は ISO 8601 文字列、uuid は正規化済み文字列。
+
+    RowPage:
+      type: object
+      required: [rows, total, limit, offset]
+      properties:
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/Row'
+        total:
+          type: integer
+          description: 検索条件適用後の総件数
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    # ------------------------------------------------------------- batch
+    PrimaryKey:
+      type: object
+      additionalProperties: true
+      description: |
+        主キー列名→値のマップ。単一キーなら {"id": 1}、
+        複合キーなら {"order_id": 1, "line_no": 2} の形。
+      example: { id: 42 }
+
+    BatchRequest:
+      type: object
+      properties:
+        inserts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Row'
+          description: readonly 列を含めてはならない(400)
+        updates:
+          type: array
+          items:
+            type: object
+            required: [key, changes]
+            properties:
+              key:
+                $ref: '#/components/schemas/PrimaryKey'
+              changes:
+                $ref: '#/components/schemas/Row'
+              rowVersion:
+                type: string
+                description: base64。hasRowVersion のテーブルでは必須。
+        deletes:
+          type: array
+          items:
+            type: object
+            required: [key]
+            properties:
+              key:
+                $ref: '#/components/schemas/PrimaryKey'
+              rowVersion:
+                type: string
+      example:
+        inserts:
+          - { code: "D-4001", name: "モニター 27インチ", price: 29800 }
+        updates:
+          - key: { id: 42 }
+            changes: { price: 1980 }
+            rowVersion: "AAAAAAAAB9E="
+        deletes:
+          - key: { id: 7 }
+            rowVersion: "AAAAAAAAB9I="
+
+    BatchResult:
+      type: object
+      required: [inserted, updated, deleted]
+      properties:
+        inserted:
+          type: integer
+        updated:
+          type: integer
+        deleted:
+          type: integer
+        insertedKeys:
+          type: array
+          items:
+            $ref: '#/components/schemas/PrimaryKey'
+          description: IDENTITY 採番された主キーの返却(フロントのバッファ更新用)
+
+    BatchError:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - type: object
+          properties:
+            details:
+              type: object
+              properties:
+                operation:
+                  type: string
+                  enum: [insert, update, delete]
+                index:
+                  type: integer
+                  description: リクエスト配列内の位置(0始まり)
+                reason:
+                  type: string
+                  enum: [constraint_violation, row_version_mismatch, not_found, validation]
+
+security:
+  - cookieAuth: []
