@@ -1,0 +1,1245 @@
+openapi: 3.0.3
+info:
+  title: table-maint API
+  version: 2.0.0
+  description: |
+    社内LAN向けテーブルメンテナンスツールのAPI (v2)。
+
+    ## 認証
+    LDAP(AD) bind 認証。成功時に不透明なセッションID を httpOnly cookie (`sid`)
+    で発行し、セッション本体は Redis に保存する(TTL 30分スライディング)。
+
+    ## 認可(機能ごとの権限レベル)
+    権限は機能(action)単位で `app_user_auth` に保存される。
+    レベルは admin > maintainer > user の3段階で、行が無い機能は権限なし(403)。
+
+    | 機能 code | user | maintainer | admin |
+    |---|---|---|---|
+    | table-maint | 行の閲覧 | + 追加/編集/削除 | 同左 |
+    | settings    | - | - | 機能マスタ/ユーザー権限/管理テーブルの編集、履歴閲覧 |
+
+    ## 管理対象テーブル
+    admin が `POST /managed-tables` で任意の schema.table を登録すると、
+    バックエンドが SQL Server のカタログからメタデータ(列/PK/型)を実行時に
+    取得し、汎用の閲覧/編集 UI が動く。
+
+    ## 監査
+    全ての変更操作とログイン/ログアウトは `app_operation_history` に記録される。
+
+    ## エラー
+    すべてのエラーは `Error` スキーマで返る。認証切れは一律 401、
+    権限不足は 403、存在しないリソースは 404。
+
+servers:
+  - url: /api/v1
+
+tags:
+  - name: auth
+    description: LDAP認証とセッション(Redis)
+  - name: tables
+    description: 管理対象テーブルの操作(メタデータ駆動)
+  - name: schema
+    description: SQL Server カタログの参照(テーブル登録用, admin)
+  - name: admin
+    description: 機能マスタ・ユーザー権限の管理(admin)
+  - name: history
+    description: 操作履歴(admin)
+
+paths:
+  # ---------------------------------------------------------------- auth
+  /auth/login:
+    post:
+      tags: [auth]
+      operationId: login
+      summary: LDAP(AD) 認証してセッション cookie を発行
+      description: |
+        search-then-bind で認証する。成功時:
+        1. objectGUID を正規化して `app_users` へ UPSERT(初回は自動登録)
+        2. Redis にセッションを作成し、セッションID を httpOnly cookie `sid` で発行
+        3. 呼び出しユーザーの機能権限つきで `Me` を返す
+      security: []          # このエンドポイントのみ未認証で呼べる
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: 認証成功。Set-Cookie でセッションを発行。
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: sid=xxxxx; Path=/; HttpOnly; SameSite=Lax
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+        '401':
+          description: 資格情報が不正(ユーザー不存在・パスワード誤りを区別しない)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: LDAP サーバーに到達できない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: セッションストア(Redis)が利用できない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      operationId: logout
+      summary: セッションを破棄する
+      description: Redis のセッションを削除し、cookie を Max-Age=0 で上書きする。
+      responses:
+        '204':
+          description: ログアウト完了
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/me:
+    get:
+      tags: [auth]
+      operationId: getMe
+      summary: 現在のユーザーと機能権限を返す
+      description: |
+        フロントの起動時に呼び、ログイン状態を判定する。
+        `actions` はダッシュボードのカード描画にそのまま使える
+        (enabled な機能のみ、sort_order 順)。
+      responses:
+        '200':
+          description: ログイン中のユーザー情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # -------------------------------------------------------- managed tables
+  /managed-tables:
+    get:
+      tags: [tables]
+      operationId: listManagedTables
+      summary: 管理対象テーブルの一覧
+      description: |
+        enabled な管理対象テーブルを sort_order 順で返す。
+        `all=true` は settings:admin 専用で、disabled も含めた全件を返す
+        (設定画面用)。
+      parameters:
+        - name: all
+          in: query
+          description: disabled も含める(settings:admin のみ)
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: テーブル一覧
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [tables]
+                properties:
+                  tables:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ManagedTable'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [tables]
+      operationId: createManagedTable
+      summary: テーブルを管理対象として登録 (settings:admin)
+      description: |
+        指定の schema.table を SQL Server カタログと突合して検証する:
+        - 実在する BASE TABLE であること
+        - 主キーを持つこと(無いテーブルは登録不可)
+        - `app_` 接頭辞(本ツール自身のテーブル)でないこと
+        検証に通れば `app_managed_tables` へ登録し、登録時点の PK を
+        スナップショットとして保存する。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManagedTableCreate'
+      responses:
+        '201':
+          description: 登録成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManagedTable'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: 指定の schema.table が存在しない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: 既に登録済み、または主キーが無い等で登録できない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /managed-tables/{id}:
+    patch:
+      tags: [tables]
+      operationId: updateManagedTable
+      summary: 管理対象テーブルの表示名などを変更 (settings:admin)
+      parameters:
+        - $ref: '#/components/parameters/ManagedTableId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManagedTableUpdate'
+      responses:
+        '200':
+          description: 更新後のテーブル
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManagedTable'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [tables]
+      operationId: deleteManagedTable
+      summary: 管理対象から外す (settings:admin)
+      description: |
+        `app_managed_tables` から行を削除する。対象の業務テーブル自体は
+        削除されない。操作は履歴に残る。
+      parameters:
+        - $ref: '#/components/parameters/ManagedTableId'
+      responses:
+        '204':
+          description: 削除完了
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /managed-tables/{id}/meta:
+    get:
+      tags: [tables]
+      operationId: getTableMeta
+      summary: テーブルの列定義(フロントの動的描画用)
+      description: |
+        SQL Server カタログ(INFORMATION_SCHEMA / sys.columns)から実行時に
+        取得した列定義を返す。IDENTITY・計算列・rowversion は readonly。
+        対応外の型(varbinary 等)は string + readonly に落とす。
+      parameters:
+        - $ref: '#/components/parameters/ManagedTableId'
+      responses:
+        '200':
+          description: 列定義と自ユーザーの操作可否
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TableMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /managed-tables/{id}/rows:
+    get:
+      tags: [tables]
+      operationId: listRows
+      summary: 行データの取得(ページネーション)
+      parameters:
+        - $ref: '#/components/parameters/ManagedTableId'
+        - name: limit
+          in: query
+          description: 1回のフェッチ件数(1〜200)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: q
+          in: query
+          description: 簡易検索。文字列型の列を対象に LIKE 検索する。
+          schema:
+            type: string
+        - name: orderBy
+          in: query
+          description: ソート列。実在する列名のみ許可(SQLインジェクション防止)。
+          schema:
+            type: string
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+      responses:
+        '200':
+          description: 行データ。`total` は検索条件適用後の総件数。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RowPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /managed-tables/{id}/rows/batch:
+    post:
+      tags: [tables]
+      operationId: applyBatch
+      summary: 追加・更新・削除を1トランザクションで一括反映 (table-maint:maintainer+)
+      description: |
+        フロントの編集バッファの差分をまとめて受け取り、**単一トランザクション**
+        で適用する。1件でも失敗すれば全体をロールバックし 409 を返す(部分成功なし)。
+
+        楽観ロック: rowversion 列を持つテーブルでは updates/deletes に取得時の
+        `rowVersion` が必須。不一致なら 409 conflict。rowversion の無いテーブル
+        は主キーのみで更新する(last-write-wins)。
+      parameters:
+        - $ref: '#/components/parameters/ManagedTableId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchRequest'
+      responses:
+        '200':
+          description: 全件反映成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: |
+            制約違反・楽観ロック不一致などで全体ロールバックした。
+            `details` にどの操作が原因かを含める。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchError'
+
+  # -------------------------------------------------------------- schema
+  /schema/tables:
+    get:
+      tags: [schema]
+      operationId: listSchemaTables
+      summary: 登録候補テーブルの一覧 (settings:admin)
+      description: |
+        SQL Server カタログから BASE TABLE を列挙する。本ツール自身の
+        テーブル(`app_%`)と登録済みテーブルは除外する。登録ダイアログ用。
+      parameters:
+        - name: schema
+          in: query
+          description: スキーマ名で絞り込み
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 候補テーブル一覧
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [tables]
+                properties:
+                  tables:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SchemaTable'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /schema/tables/{schema}/{table}/columns:
+    get:
+      tags: [schema]
+      operationId: previewSchemaTable
+      summary: 登録前のカラムプレビュー (settings:admin)
+      description: 登録ダイアログで列定義と PK を確認するためのプレビュー。
+      parameters:
+        - name: schema
+          in: path
+          required: true
+          schema:
+            type: string
+            maxLength: 128
+        - name: table
+          in: path
+          required: true
+          schema:
+            type: string
+            maxLength: 128
+      responses:
+        '200':
+          description: 列定義プレビュー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchemaTablePreview'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # --------------------------------------------------------------- admin
+  /admin/users:
+    get:
+      tags: [admin]
+      operationId: listUsers
+      summary: ユーザー一覧と機能権限 (settings:admin)
+      parameters:
+        - name: q
+          in: query
+          description: username / display_name の部分一致検索
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ユーザー一覧
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [users]
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserWithAuth'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/users/{objectGuid}/auth:
+    put:
+      tags: [admin]
+      operationId: setUserAuth
+      summary: ユーザーの機能権限を一括置換 (settings:admin)
+      description: |
+        指定ユーザーの `app_user_auth` を body の内容で置き換える
+        (含まれない機能の行は削除 = 権限なし)。
+        自分自身から settings:admin を外すことはできない(409)。
+      parameters:
+        - name: objectGuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [assignments]
+              properties:
+                assignments:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/AuthAssignment'
+      responses:
+        '200':
+          description: 更新後のユーザー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserWithAuth'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: 自分自身の settings:admin を外そうとした
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/actions:
+    get:
+      tags: [admin]
+      operationId: listActions
+      summary: 機能マスタの全件一覧 (settings:admin)
+      description: disabled も含む全件。設定画面のダッシュボード編集用。
+      responses:
+        '200':
+          description: 機能一覧
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [actions]
+                properties:
+                  actions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Action'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [admin]
+      operationId: createAction
+      summary: 機能を追加 (settings:admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActionCreate'
+      responses:
+        '201':
+          description: 追加した機能
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Action'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: code が重複している
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/actions/{id}:
+    patch:
+      tags: [admin]
+      operationId: updateAction
+      summary: 機能を変更 (settings:admin)
+      description: code は変更不可(ルーティングと対応するため)。
+      parameters:
+        - $ref: '#/components/parameters/ActionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActionUpdate'
+      responses:
+        '200':
+          description: 更新後の機能
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Action'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [admin]
+      operationId: deleteAction
+      summary: 機能を削除 (settings:admin)
+      parameters:
+        - $ref: '#/components/parameters/ActionId'
+      responses:
+        '204':
+          description: 削除完了(紐づく app_user_auth も CASCADE で消える)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: 組込機能(is_builtin)は削除できない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # -------------------------------------------------------------- history
+  /history:
+    get:
+      tags: [history]
+      operationId: listHistory
+      summary: 操作履歴の検索 (settings:admin)
+      parameters:
+        - name: username
+          in: query
+          schema:
+            type: string
+        - name: actionCode
+          in: query
+          schema:
+            type: string
+        - name: target
+          in: query
+          description: 対象(例 dbo.products)の部分一致
+          schema:
+            type: string
+        - name: result
+          in: query
+          schema:
+            type: string
+            enum: [success, failure]
+        - name: from
+          in: query
+          description: この日時以降(ISO 8601)
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          description: この日時以前(ISO 8601)
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: 履歴(occurred_at 降順)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoryPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sid
+      description: Redis セッションID を格納した httpOnly cookie
+
+  parameters:
+    ManagedTableId:
+      name: id
+      in: path
+      required: true
+      description: app_managed_tables.id
+      schema:
+        type: integer
+      example: 1
+    ActionId:
+      name: id
+      in: path
+      required: true
+      description: app_actions.id
+      schema:
+        type: integer
+      example: 1
+
+  responses:
+    Unauthorized:
+      description: 未ログインまたはセッション失効
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: 権限不足(必要な機能・レベルを満たさない)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: リソースが存在しない
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    BadRequest:
+      description: バリデーションエラー(不正な列名・型不一致など)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    # ------------------------------------------------------------ common
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: 機械可読なエラーコード
+          enum:
+            - invalid_credentials
+            - unauthorized
+            - forbidden
+            - not_found
+            - validation_failed
+            - conflict
+            - ldap_unavailable
+            - session_unavailable
+            - internal
+        message:
+          type: string
+          description: 人間向けメッセージ(日本語)
+        details:
+          type: object
+          additionalProperties: true
+          description: エラー種別ごとの補足情報
+
+    AuthLevel:
+      type: string
+      enum: [admin, maintainer, user]
+      description: 機能ごとの権限レベル。admin > maintainer > user。
+
+    # -------------------------------------------------------------- auth
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          description: sAMAccountName (開発 OpenLDAP では uid)
+          example: yamada.taro
+        password:
+          type: string
+          format: password
+          minLength: 1
+
+    Me:
+      type: object
+      required: [username, displayName, actions]
+      properties:
+        username:
+          type: string
+          example: yamada.taro
+        displayName:
+          type: string
+          example: 山田 太郎
+        email:
+          type: string
+          example: yamada.taro@example.co.jp
+        actions:
+          type: array
+          description: 権限を持つ機能(enabled のみ, sort_order 順)。ダッシュボードのカード描画に使う。
+          items:
+            $ref: '#/components/schemas/GrantedAction'
+
+    GrantedAction:
+      type: object
+      required: [id, code, name, icon, authLevel]
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+          example: table-maint
+        name:
+          type: string
+          example: テーブルメンテナンス
+        icon:
+          type: string
+          description: Tabler icon 名
+          example: table
+        authLevel:
+          $ref: '#/components/schemas/AuthLevel'
+
+    # ---------------------------------------------------- managed tables
+    ManagedTable:
+      type: object
+      required: [id, schemaName, tableName, displayName, sortOrder, enabled, writable]
+      properties:
+        id:
+          type: integer
+        schemaName:
+          type: string
+          example: dbo
+        tableName:
+          type: string
+          example: products
+        displayName:
+          type: string
+          example: 商品マスタ
+        description:
+          type: string
+        sortOrder:
+          type: integer
+        enabled:
+          type: boolean
+        writable:
+          type: boolean
+          description: 呼び出しユーザーが編集可能か(table-maint:maintainer+)
+
+    ManagedTableCreate:
+      type: object
+      required: [schemaName, tableName, displayName]
+      properties:
+        schemaName:
+          type: string
+          maxLength: 128
+          example: dbo
+        tableName:
+          type: string
+          maxLength: 128
+          example: products
+        displayName:
+          type: string
+          maxLength: 128
+          example: 商品マスタ
+        description:
+          type: string
+          maxLength: 400
+        sortOrder:
+          type: integer
+          default: 0
+
+    ManagedTableUpdate:
+      type: object
+      description: 指定したフィールドだけ更新する(部分更新)。
+      properties:
+        displayName:
+          type: string
+          maxLength: 128
+        description:
+          type: string
+          maxLength: 400
+        sortOrder:
+          type: integer
+        enabled:
+          type: boolean
+
+    TableMeta:
+      type: object
+      required: [id, displayName, primaryKey, writable, hasRowVersion, columns]
+      properties:
+        id:
+          type: integer
+          description: app_managed_tables.id
+        schemaName:
+          type: string
+        tableName:
+          type: string
+        displayName:
+          type: string
+        primaryKey:
+          type: array
+          description: 複合主キー対応のため配列
+          items:
+            type: string
+          example: [id]
+        writable:
+          type: boolean
+        hasRowVersion:
+          type: boolean
+          description: rowversion 列を持ち楽観ロック可能か
+        columns:
+          type: array
+          items:
+            $ref: '#/components/schemas/ColumnMeta'
+
+    ColumnMeta:
+      type: object
+      required: [name, type, nullable, readonly]
+      properties:
+        name:
+          type: string
+          example: price
+        type:
+          type: string
+          description: |
+            フロントの入力コントロール選択に使う正規化済み型。
+            対応外の SQL 型は string + readonly に落とす。
+          enum: [string, int, decimal, bool, date, datetime, uuid]
+        nullable:
+          type: boolean
+        readonly:
+          type: boolean
+          description: IDENTITY 列・計算列・rowversion・対応外型。true なら編集UI無効。
+        required:
+          type: boolean
+          default: false
+          description: NOT NULL かつデフォルト値なし(insert 時に必須)
+        maxLength:
+          type: integer
+          description: string 型のときの最大長(nvarchar(n) 由来。MAX は省略)
+        searchable:
+          type: boolean
+          default: false
+          description: q パラメータの検索対象か(文字列型の列)
+
+    Row:
+      type: object
+      additionalProperties: true
+      description: |
+        列名→値のマップ。値の型は ColumnMeta.type に従う。
+        date/datetime は ISO 8601 文字列、uuid は正規化済み文字列。
+
+    RowPage:
+      type: object
+      required: [rows, total, limit, offset]
+      properties:
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/Row'
+        total:
+          type: integer
+          description: 検索条件適用後の総件数
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    # ------------------------------------------------------------- batch
+    PrimaryKey:
+      type: object
+      additionalProperties: true
+      description: |
+        主キー列名→値のマップ。単一キーなら {"id": 1}、
+        複合キーなら {"order_id": 1, "line_no": 2} の形。
+      example: { id: 42 }
+
+    BatchRequest:
+      type: object
+      properties:
+        inserts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Row'
+          description: readonly 列を含めてはならない(400)
+        updates:
+          type: array
+          items:
+            type: object
+            required: [key, changes]
+            properties:
+              key:
+                $ref: '#/components/schemas/PrimaryKey'
+              changes:
+                $ref: '#/components/schemas/Row'
+              rowVersion:
+                type: string
+                description: base64。hasRowVersion のテーブルでは必須。
+        deletes:
+          type: array
+          items:
+            type: object
+            required: [key]
+            properties:
+              key:
+                $ref: '#/components/schemas/PrimaryKey'
+              rowVersion:
+                type: string
+      example:
+        inserts:
+          - { code: "D-4001", name: "モニター 27インチ", price: 29800, stock: 10 }
+        updates:
+          - key: { id: 42 }
+            changes: { price: 1980 }
+            rowVersion: "AAAAAAAAB9E="
+        deletes:
+          - key: { id: 7 }
+            rowVersion: "AAAAAAAAB9I="
+
+    BatchResult:
+      type: object
+      required: [inserted, updated, deleted]
+      properties:
+        inserted:
+          type: integer
+        updated:
+          type: integer
+        deleted:
+          type: integer
+        insertedKeys:
+          type: array
+          items:
+            $ref: '#/components/schemas/PrimaryKey'
+          description: IDENTITY 採番された主キーの返却(フロントのバッファ更新用)
+
+    BatchError:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - type: object
+          properties:
+            details:
+              type: object
+              properties:
+                operation:
+                  type: string
+                  enum: [insert, update, delete]
+                index:
+                  type: integer
+                  description: リクエスト配列内の位置(0始まり)
+                reason:
+                  type: string
+                  enum: [constraint_violation, row_version_mismatch, not_found, validation]
+
+    # -------------------------------------------------------------- schema
+    SchemaTable:
+      type: object
+      required: [schemaName, tableName, hasPrimaryKey]
+      properties:
+        schemaName:
+          type: string
+          example: dbo
+        tableName:
+          type: string
+          example: orders
+        hasPrimaryKey:
+          type: boolean
+          description: false のテーブルは登録できない(UI 側でグレーアウト)
+
+    SchemaTablePreview:
+      type: object
+      required: [schemaName, tableName, primaryKey, hasRowVersion, columns]
+      properties:
+        schemaName:
+          type: string
+        tableName:
+          type: string
+        primaryKey:
+          type: array
+          items:
+            type: string
+        hasRowVersion:
+          type: boolean
+        columns:
+          type: array
+          items:
+            $ref: '#/components/schemas/ColumnMeta'
+
+    # --------------------------------------------------------------- admin
+    Action:
+      type: object
+      required: [id, code, name, icon, sortOrder, enabled, isBuiltin]
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+          example: table-maint
+        name:
+          type: string
+          example: テーブルメンテナンス
+        icon:
+          type: string
+          example: table
+        sortOrder:
+          type: integer
+        enabled:
+          type: boolean
+        isBuiltin:
+          type: boolean
+          description: 組込機能。削除不可・code 変更不可。
+
+    ActionCreate:
+      type: object
+      required: [code, name]
+      properties:
+        code:
+          type: string
+          pattern: '^[a-z][a-z0-9-]{0,63}$'
+          example: hulft-config
+        name:
+          type: string
+          maxLength: 128
+        icon:
+          type: string
+          maxLength: 64
+          default: apps
+        sortOrder:
+          type: integer
+          default: 0
+        enabled:
+          type: boolean
+          default: true
+
+    ActionUpdate:
+      type: object
+      description: 指定したフィールドだけ更新する(部分更新)。code は変更不可。
+      properties:
+        name:
+          type: string
+          maxLength: 128
+        icon:
+          type: string
+          maxLength: 64
+        sortOrder:
+          type: integer
+        enabled:
+          type: boolean
+
+    UserWithAuth:
+      type: object
+      required: [objectGuid, username, displayName, auth]
+      properties:
+        objectGuid:
+          type: string
+          format: uuid
+        username:
+          type: string
+        displayName:
+          type: string
+        email:
+          type: string
+        lastLoginAt:
+          type: string
+          format: date-time
+        auth:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserAuthEntry'
+
+    UserAuthEntry:
+      type: object
+      required: [actionId, actionCode, authLevel]
+      properties:
+        actionId:
+          type: integer
+        actionCode:
+          type: string
+        authLevel:
+          $ref: '#/components/schemas/AuthLevel'
+
+    AuthAssignment:
+      type: object
+      required: [actionId, authLevel]
+      properties:
+        actionId:
+          type: integer
+        authLevel:
+          $ref: '#/components/schemas/AuthLevel'
+
+    # -------------------------------------------------------------- history
+    HistoryEntry:
+      type: object
+      required: [id, occurredAt, username, actionCode, operation, result]
+      properties:
+        id:
+          type: integer
+          format: int64
+        occurredAt:
+          type: string
+          format: date-time
+        objectGuid:
+          type: string
+          format: uuid
+        username:
+          type: string
+        actionCode:
+          type: string
+          example: table-maint
+        operation:
+          type: string
+          example: rows.batch
+        target:
+          type: string
+          example: dbo.products
+        detail:
+          type: object
+          additionalProperties: true
+          description: 変更前後・件数などの JSON
+        result:
+          type: string
+          enum: [success, failure]
+        errorCode:
+          type: string
+        clientIp:
+          type: string
+
+    HistoryPage:
+      type: object
+      required: [entries, total, limit, offset]
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/HistoryEntry'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+security:
+  - cookieAuth: []
