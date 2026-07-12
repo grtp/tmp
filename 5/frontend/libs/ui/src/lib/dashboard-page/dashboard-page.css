@@ -1,0 +1,249 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--tm-page-bg);
+}
+.header {
+  background: var(--tm-primary);
+  color: var(--tm-text-on-primary);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.header-title {
+  background: transparent;
+  border: none;
+  color: var(--tm-text-on-primary);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  padding: 4px 6px;
+  border-radius: var(--tm-radius);
+  cursor: pointer;
+}
+.header-title:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+.header-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.sidebar {
+  width: 180px;
+  background: var(--tm-surface-alt);
+  border-right: 1px solid var(--tm-border);
+  padding: 12px 0;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+.menu-item {
+  font-size: 13px;
+  font-family: inherit;
+  text-align: left;
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  color: var(--tm-text-secondary);
+  cursor: pointer;
+  border-left: 3px solid transparent;
+}
+.menu-item:hover {
+  background: var(--tm-primary-tint-weak);
+}
+.menu-item.active {
+  background: var(--tm-primary-tint);
+  border-left-color: var(--tm-primary);
+  color: var(--tm-text);
+}
+.main {
+  flex: 1;
+  padding: 20px 24px;
+  background: var(--tm-surface);
+}
+.greeting {
+  font-size: 14px;
+  margin: 0 0 16px;
+}
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+.card {
+  position: relative;
+  border: 1px solid var(--tm-border);
+  border-radius: var(--tm-radius);
+  background: var(--tm-surface);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.card:hover {
+  border-color: var(--tm-primary);
+  box-shadow: 0 0 0 2px var(--tm-primary-tint);
+}
+.card.dragging {
+  opacity: 0.4;
+}
+.card-body {
+  font-family: inherit;
+  text-align: left;
+  background: transparent;
+  border: none;
+  padding: 14px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.card-icon {
+  font-size: 22px;
+  color: var(--tm-primary);
+}
+.card-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tm-text);
+}
+.card-name .ext {
+  font-size: 12px;
+  color: var(--tm-text-muted);
+  margin-left: 2px;
+}
+/* 詳細行(テーブル表示名 / URL など)。空でも高さを確保して段を揃える */
+.card-detail {
+  font-size: 11px;
+  color: var(--tm-text-secondary);
+  min-height: 13px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.card-perm {
+  font-size: 11px;
+  color: var(--tm-text-muted);
+  min-height: 13px;
+}
+.link-ops {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: none;
+  gap: 4px;
+}
+.card:hover .link-ops {
+  display: inline-flex;
+}
+.mini {
+  border: 1px solid var(--tm-border);
+  background: var(--tm-surface);
+  border-radius: var(--tm-radius);
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+  color: var(--tm-text-secondary);
+  font-size: 11px;
+  padding: 0;
+}
+.mini.danger {
+  color: var(--tm-danger);
+  border-color: var(--tm-danger);
+}
+.mini.danger:hover {
+  background: var(--tm-danger-bg);
+}
+.empty {
+  grid-column: 1 / -1;
+  font-size: 13px;
+  color: var(--tm-text-muted);
+  border: 1px dashed var(--tm-border-strong);
+  border-radius: var(--tm-radius);
+  padding: 24px;
+  text-align: center;
+  margin: 0;
+}
+.fab {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: none;
+  background: var(--tm-primary);
+  color: var(--tm-text-on-primary);
+  font-size: 24px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+.fab:hover {
+  background: var(--tm-primary-dark);
+}
+/* 並び替えモード: カードがつかめることを示す */
+.cards.editing .card {
+  cursor: grab;
+  border-style: dashed;
+  border-color: var(--tm-primary);
+}
+.cards.editing .card-body {
+  cursor: grab;
+}
+.edit-actions {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  display: flex;
+  gap: 10px;
+  z-index: 50;
+}
+.edit-btn {
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 22px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+.edit-btn.cancel {
+  background: var(--tm-surface);
+  color: var(--tm-text);
+  border: 1px solid var(--tm-border);
+}
+.edit-btn.confirm {
+  background: var(--tm-primary);
+  color: var(--tm-text-on-primary);
+  border: none;
+}
+.edit-btn.confirm:hover {
+  background: var(--tm-primary-dark);
+}
+
+
+/* ブランドロゴ(六角ナット+F)。テキストと縦位置を揃える */
+.brand-logo {
+  width: 18px;
+  height: 18px;
+  vertical-align: -3px;
+  margin-right: 2px;
+}

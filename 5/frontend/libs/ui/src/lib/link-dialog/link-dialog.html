@@ -1,0 +1,47 @@
+@if (open()) {
+  <!-- 画面外クリックでは閉じない(誤操作防止)。Esc かボタンで閉じる。 -->
+  <div class="backdrop">
+    <div class="dialog" role="dialog" aria-modal="true">
+      <div class="head">
+        <span class="head-title">
+          <i class="ti ti-external-link" aria-hidden="true"></i>
+          {{ (mode() === 'create' ? 'linkDialog.createTitle' : 'linkDialog.editTitle') | transloco }}
+        </span>
+        <button class="close" type="button" (click)="cancelled.emit()" [attr.aria-label]="'common.close' | transloco">
+          <i class="ti ti-x" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div class="body">
+        @if (errorMessage(); as msg) {
+          <p class="error">{{ msg }}</p>
+        }
+        <label class="field">
+          <span class="label">{{ 'linkDialog.name' | transloco }} <span class="req">{{ 'common.required' | transloco }}</span></span>
+          <input class="input" type="text" maxlength="128" [value]="name()"
+            (input)="name.set($any($event.target).value)" (keydown.enter)="save()" />
+        </label>
+        <label class="field">
+          <span class="label">{{ 'linkDialog.url' | transloco }} <span class="req">{{ 'common.required' | transloco }}</span></span>
+          <input class="input mono" type="url" maxlength="512" placeholder="https://..."
+            [value]="url()" (input)="url.set($any($event.target).value)" (keydown.enter)="save()" />
+        </label>
+        <!-- 入力値は操作履歴に恒久記録され削除できないため、個人情報の記入を予防する -->
+        <p class="pii-note">
+          <i class="ti ti-info-circle" aria-hidden="true"></i>
+          {{ 'linkDialog.piiNote' | transloco }}
+        </p>
+      </div>
+
+      <div class="foot">
+        <button class="btn" type="button" [disabled]="saving()" (click)="cancelled.emit()">
+          {{ 'common.cancel' | transloco }}
+        </button>
+        <button class="btn primary" type="button" [disabled]="saving() || !canSave()" (click)="save()">
+          {{ (saving() ? 'common.saving' : 'common.save') | transloco }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+

@@ -1,0 +1,112 @@
+@if (open()) {
+  <!-- 画面外クリックでは閉じない(誤操作防止)。Esc かボタンで閉じる。 -->
+  <div class="backdrop">
+    <div class="dialog" role="dialog" aria-modal="true">
+      <div class="head">
+        <span class="head-title">
+          <i class="ti ti-layout-dashboard" aria-hidden="true"></i>
+          {{ (mode() === 'create' ? 'templateEditor.createTitle' : 'templateEditor.editTitle') | transloco }}
+        </span>
+        <button class="close" type="button" (click)="cancelled.emit()" [attr.aria-label]="'common.close' | transloco">
+          <i class="ti ti-x" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div class="body">
+        @if (errorMessage(); as msg) {
+          <p class="error">{{ msg }}</p>
+        }
+
+        <label class="field">
+          <span class="label">{{ 'templateEditor.name' | transloco }} <span class="req">{{ 'common.required' | transloco }}</span></span>
+          <input class="input" type="text" maxlength="128" [value]="name()"
+            (input)="name.set($any($event.target).value)" />
+        </label>
+        <label class="field">
+          <span class="label">{{ 'templateEditor.description' | transloco }}</span>
+          <input class="input" type="text" maxlength="400" [value]="description()"
+            (input)="description.set($any($event.target).value)" />
+        </label>
+        <label class="check-field">
+          <input type="checkbox" [checked]="enabled()" (change)="enabled.set($any($event.target).checked)" />
+          <span>{{ 'templateEditor.enabled' | transloco }}</span>
+        </label>
+
+        <p class="section">{{ 'templateEditor.items' | transloco }}</p>
+        <ul class="items">
+          @for (item of items(); track $index; let i = $index; let last = $last) {
+            <li class="item">
+              <i class="item-icon ti ti-{{ item.icon }}" aria-hidden="true"></i>
+              <span class="item-label">
+                {{ item.label }}
+                @if (item.kind === 'link') {
+                  <span class="item-url mono">{{ item.url }}</span>
+                }
+              </span>
+              <span class="item-ops">
+                <button class="mini" type="button" [disabled]="i === 0" (click)="move(i, -1)"
+                  [attr.aria-label]="'templateEditor.up' | transloco">
+                  <i class="ti ti-chevron-up" aria-hidden="true"></i>
+                </button>
+                <button class="mini" type="button" [disabled]="last" (click)="move(i, 1)"
+                  [attr.aria-label]="'templateEditor.down' | transloco">
+                  <i class="ti ti-chevron-down" aria-hidden="true"></i>
+                </button>
+                <button class="mini danger" type="button" (click)="remove(i)"
+                  [attr.aria-label]="'templateEditor.remove' | transloco">
+                  <i class="ti ti-x" aria-hidden="true"></i>
+                </button>
+              </span>
+            </li>
+          } @empty {
+            <li class="muted">{{ 'templateEditor.noItems' | transloco }}</li>
+          }
+        </ul>
+
+        <div class="adder">
+          <select class="input select" [value]="pendingActionId()"
+            (change)="pendingActionId.set($any($event.target).value)">
+            <option value="">{{ 'templateEditor.addAction' | transloco }}…</option>
+            @for (a of selectableActions(); track a.id) {
+              <option [value]="a.id">{{ a.name }}</option>
+            }
+          </select>
+          <button class="btn" type="button" [disabled]="pendingActionId() === ''" (click)="addAction()">
+            <i class="ti ti-plus" aria-hidden="true"></i>
+          </button>
+        </div>
+        <div class="adder table-adder">
+          <select class="input select" [value]="pendingTableId()"
+            (change)="pendingTableId.set($any($event.target).value)">
+            <option value="">{{ 'templateEditor.addTable' | transloco }}…</option>
+            @for (t of selectableTables(); track t.id) {
+              <option [value]="t.id">{{ t.displayName }}</option>
+            }
+          </select>
+          <button class="btn" type="button" [disabled]="pendingTableId() === ''" (click)="addTable()">
+            <i class="ti ti-plus" aria-hidden="true"></i>
+          </button>
+        </div>
+        <div class="adder">
+          <input class="input" type="text" [placeholder]="'templateEditor.linkNamePlaceholder' | transloco"
+            [value]="pendingLinkName()" (input)="pendingLinkName.set($any($event.target).value)" />
+          <input class="input grow mono" type="text" [placeholder]="'templateEditor.linkUrlPlaceholder' | transloco"
+            [value]="pendingLinkUrl()" (input)="pendingLinkUrl.set($any($event.target).value)" />
+          <button class="btn" type="button" [disabled]="!canAddLink()" (click)="addLink()">
+            <i class="ti ti-plus" aria-hidden="true"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="foot">
+        <button class="btn" type="button" [disabled]="saving()" (click)="cancelled.emit()">
+          {{ 'common.cancel' | transloco }}
+        </button>
+        <button class="btn primary" type="button" [disabled]="saving() || !canSave()" (click)="save()">
+          {{ (saving() ? 'common.saving' : 'common.save') | transloco }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+

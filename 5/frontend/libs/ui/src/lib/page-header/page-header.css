@@ -1,0 +1,56 @@
+.header {
+  background: var(--tm-primary);
+  color: var(--tm-text-on-primary);
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.left,
+.right {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.back {
+  background: transparent;
+  border: none;
+  color: var(--tm-text-on-primary);
+  cursor: pointer;
+  font-size: 16px;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--tm-radius);
+}
+.back:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+.title {
+  background: transparent;
+  border: none;
+  color: var(--tm-text-on-primary);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  padding: 4px 6px;
+  border-radius: var(--tm-radius);
+  cursor: pointer;
+}
+.title:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+.divider {
+  opacity: 0.6;
+}
+.page-title {
+  font-size: 13px;
+}
+
+
+/* ブランドロゴ(六角ナット+F)。テキストと縦位置を揃える */
+.brand-logo {
+  width: 18px;
+  height: 18px;
+  vertical-align: -3px;
+  margin-right: 2px;
+}

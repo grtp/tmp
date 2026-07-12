@@ -1,0 +1,28 @@
+<div class="wrap">
+  @if (loading()) {
+    <p class="state">{{ 'common.loading' | transloco }}</p>
+  } @else {
+    <div class="cards">
+      @for (t of tables(); track t.id) {
+        <button class="card" type="button" (click)="tableSelected.emit(t.id)">
+          <span class="card-head">
+            <i class="card-icon ti ti-table" aria-hidden="true"></i>
+            @if (t.connectionName) {
+              <span class="conn-badge">{{ t.connectionName }}</span>
+            } @else {
+              <span class="conn-badge default">{{ 'common.defaultDb' | transloco }}</span>
+            }
+          </span>
+          <span class="card-name">{{ t.displayName }}</span>
+          <span class="card-table mono">{{ t.schemaName }}.{{ t.tableName }}</span>
+          @if (t.description) {
+            <span class="card-desc">{{ t.description }}</span>
+          }
+        </button>
+      } @empty {
+        <p class="empty">{{ 'tableSelect.empty' | transloco }}</p>
+      }
+    </div>
+  }
+</div>
+

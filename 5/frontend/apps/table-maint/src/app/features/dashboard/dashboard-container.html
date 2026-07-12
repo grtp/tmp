@@ -1,0 +1,55 @@
+<tm-dashboard-page
+  [userName]="userName()"
+  [greeting]="greeting()"
+  [menuItems]="menuItems()"
+  activeMenuId="home"
+  [cards]="cards()"
+  [editMode]="editMode()"
+  (cardSelected)="onCard($event)"
+  (menuSelected)="onMenu($event)"
+  (linkEditClicked)="openLinkEdit($event)"
+  (linkDeleteClicked)="askLinkDelete($event)"
+  (cardHideClicked)="onHideCard($event)"
+  (orderChanged)="onOrderChanged($event)"
+  (editCancelled)="editMode.set(false)"
+  (fabClicked)="openAddFeature()"
+/>
+
+<tm-add-feature-dialog
+  [open]="addFeatureOpen()"
+  [functions]="shortcutFunctions()"
+  [tables]="pickableTables()"
+  [templates]="selectableTemplates()"
+  [selectedTemplateId]="templateId()"
+  [saving]="saving()"
+  [errorMessage]="addFeatureError()"
+  (entrySelected)="onAddFeature($event)"
+  (linkSubmitted)="onLinkSubmitted($event)"
+  (templateSaveRequested)="onTemplateSaveRequested($event)"
+  (personalTemplateDeleted)="onPersonalTemplateDeleted($event)"
+  (shortcutPicked)="onShortcutPicked($event)"
+  (tablePicked)="onTablePicked($event)"
+  (templateSelected)="onTemplateSelected($event)"
+  (cancelled)="addFeatureOpen.set(false)"
+/>
+
+<tm-link-dialog
+  [open]="linkDialogOpen()"
+  [mode]="linkDialogMode()"
+  [value]="linkDraft()"
+  [saving]="saving()"
+  [errorMessage]="linkDialogError()"
+  (saved)="onLinkSaved($event)"
+  (cancelled)="linkDialogOpen.set(false)"
+/>
+
+<tm-confirm-dialog
+  [open]="confirmOpen()"
+  [title]="confirmTitle()"
+  [message]="confirmMessage()"
+  [danger]="true"
+  [busy]="saving()"
+  (confirmed)="onLinkDeleteConfirmed()"
+  (cancelled)="confirmOpen.set(false)"
+/>
+

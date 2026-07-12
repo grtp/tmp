@@ -1,0 +1,190 @@
+@if (open()) {
+  <!-- 画面外クリックでは閉じない(誤操作防止)。Esc かボタンで閉じる。 -->
+  <div class="backdrop">
+    <div class="dialog" role="dialog" aria-modal="true">
+      <div class="head">
+        <span class="head-title">
+          <i class="ti" [class.ti-table-plus]="mode() === 'create'" [class.ti-pencil]="mode() === 'edit'" aria-hidden="true"></i>
+          {{ (mode() === 'edit' ? 'managedTableDialog.editTitle' : 'managedTableDialog.title') | transloco }}
+        </span>
+        <button class="close" type="button" (click)="cancelled.emit()" [attr.aria-label]="'common.close' | transloco">
+          <i class="ti ti-x" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div class="body">
+        @if (errorMessage(); as msg) {
+          <p class="error">{{ msg }}</p>
+        }
+
+        @if (mode() === 'edit') {
+          <!-- 編集モード: 接続・実テーブルは変更不可(固定表示) -->
+          <p class="edit-target">
+            <span class="label">{{ 'managedTableDialog.target' | transloco }}</span>
+            <span class="mono">
+              @if (editValue()?.connectionName) {
+                <span class="conn-badge">{{ editValue()!.connectionName }}</span>
+              }
+              {{ editValue()?.schemaName }}.{{ editValue()?.tableName }}
+            </span>
+          </p>
+        } @else {
+          <div class="filters">
+            <label class="filter">
+              <span class="label">{{ 'managedTableDialog.connection' | transloco }}</span>
+              <select class="select" [value]="connValue()" (change)="onConnChange($any($event.target).value)">
+                <option value="">{{ 'common.defaultDb' | transloco }}</option>
+                @for (cn of connections(); track cn.id) {
+                  <option [value]="cn.id">{{ cn.name }}</option>
+                }
+              </select>
+            </label>
+            <label class="filter grow">
+              <span class="label">{{ 'managedTableDialog.schemaFilter' | transloco }}</span>
+              <input class="input" type="search" [value]="schemaFilter()"
+                (input)="schemaFilter.set($any($event.target).value)" />
+            </label>
+          </div>
+        }
+
+        <div class="columns2" [class.single]="mode() === 'edit'">
+          @if (mode() === 'create') {
+            <div class="pane">
+              <p class="pane-title">{{ 'managedTableDialog.candidates' | transloco }}</p>
+              @if (loading()) {
+                <p class="muted">{{ 'common.loading' | transloco }}</p>
+              } @else {
+                <ul class="candidates">
+                  @for (t of filteredCandidates(); track t.schemaName + '.' + t.tableName) {
+                    <li>
+                      <button
+                        class="cand"
+                        type="button"
+                        [class.selected]="isSelected(t)"
+                        [disabled]="!t.hasPrimaryKey"
+                        (click)="select(t)"
+                      >
+                        <span class="mono">{{ t.schemaName }}.{{ t.tableName }}</span>
+                        @if (!t.hasPrimaryKey) {
+                          <span class="nopk">{{ 'managedTableDialog.noPk' | transloco }}</span>
+                        }
+                      </button>
+                    </li>
+                  } @empty {
+                    <li class="muted">{{ 'managedTableDialog.noCandidates' | transloco }}</li>
+                  }
+                </ul>
+              }
+            </div>
+          }
+
+          <div class="pane">
+            <p class="pane-title">{{ 'managedTableDialog.preview' | transloco }}</p>
+            @if (mode() === 'create' && !selected()) {
+              <p class="muted">{{ 'managedTableDialog.selectPrompt' | transloco }}</p>
+            } @else if (!preview()) {
+              <p class="muted">{{ 'common.loading' | transloco }}</p>
+            } @else {
+              <p class="pk">
+                {{ 'managedTableDialog.pk' | transloco }}:
+                <span class="mono">{{ preview()!.primaryKey.join(', ') }}</span>
+                @if (preview()!.hasRowVersion) {
+                  <span class="badge">rowversion</span>
+                }
+              </p>
+              <table class="cols">
+                <thead>
+                  <tr>
+                    <th>{{ 'managedTableDialog.colName' | transloco }}</th>
+                    <th>{{ 'managedTableDialog.colType' | transloco }}</th>
+                    <th>{{ 'managedTableDialog.colNull' | transloco }}</th>
+                    <th>{{ 'managedTableDialog.colMode' | transloco }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (c of preview()!.columns; track c.name) {
+                    <tr [class.hidden-row]="modeOf(c.name) === 'hidden'">
+                      <td class="mono">{{ c.name }}</td>
+                      <td>{{ c.type }}</td>
+                      <td>{{ (c.nullable ? 'managedTableDialog.nullableYes' : 'managedTableDialog.nullableNo') | transloco }}</td>
+                      <td>
+                        @if (isPk(c.name)) {
+                          <span class="mode-fixed">{{ 'managedTableDialog.modePk' | transloco }}</span>
+                        } @else if (c.readonly) {
+                          <span class="mode-fixed">{{ 'managedTableDialog.modeAuto' | transloco }}</span>
+                        } @else {
+                          <select class="mode-select" (change)="setMode(c.name, $any($event.target).value)">
+                            <option value="edit" [selected]="modeOf(c.name) === 'edit'">
+                              {{ 'managedTableDialog.modeEdit' | transloco }}
+                            </option>
+                            <option value="readonly" [selected]="modeOf(c.name) === 'readonly'">
+                              {{ 'managedTableDialog.modeReadonly' | transloco }}
+                            </option>
+                            <option value="hidden" [selected]="modeOf(c.name) === 'hidden'">
+                              {{ 'managedTableDialog.modeHidden' | transloco }}
+                            </option>
+                          </select>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+              @if (hiddenRequiredCols().length > 0) {
+                <!-- NOT NULL・DEFAULT なし列の除外は許可するが、新規行が作れなくなる旨を警告する -->
+                <p class="mode-warn">
+                  <i class="ti ti-alert-triangle" aria-hidden="true"></i>
+                  {{ 'managedTableDialog.hiddenRequiredWarn' | transloco: { cols: hiddenRequiredCols().join(', ') } }}
+                </p>
+              }
+            }
+          </div>
+        </div>
+
+        <label class="field">
+          <span class="label">
+            {{ 'managedTableDialog.displayName' | transloco }}
+            <span class="req">{{ 'common.required' | transloco }}</span>
+          </span>
+          <input
+            type="text"
+            class="input"
+            maxlength="128"
+            [value]="displayName()"
+            (input)="displayName.set($any($event.target).value)"
+          />
+        </label>
+        <label class="field">
+          <span class="label">{{ 'managedTableDialog.description' | transloco }}</span>
+          <input
+            type="text"
+            class="input"
+            maxlength="400"
+            [value]="description()"
+            (input)="description.set($any($event.target).value)"
+          />
+        </label>
+        <!-- 本ツールは「個人情報を扱わない」分類で運用するため、登録時に予防する。
+             (テーブルの値は操作履歴に記録される場合があり、履歴からは削除できない) -->
+        <p class="pii-note">
+          <i class="ti ti-alert-triangle" aria-hidden="true"></i>
+          {{ 'managedTableDialog.piiNote' | transloco }}
+        </p>
+      </div>
+
+      <div class="foot">
+        <button class="btn" type="button" [disabled]="saving()" (click)="cancelled.emit()">
+          {{ 'common.cancel' | transloco }}
+        </button>
+        <button class="btn primary" type="button" [disabled]="!canConfirm() || saving()" (click)="confirm()">
+          @if (mode() === 'edit') {
+            {{ (saving() ? 'common.saving' : 'common.save') | transloco }}
+          } @else {
+            {{ (saving() ? 'managedTableDialog.registering' : 'managedTableDialog.register') | transloco }}
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+}
+

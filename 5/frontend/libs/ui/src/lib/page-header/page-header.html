@@ -1,0 +1,36 @@
+<header class="header">
+  <span class="left">
+    <button
+      class="back"
+      type="button"
+      (click)="backClicked.emit()"
+      [attr.aria-label]="'common.backToDashboard' | transloco"
+    >
+      <i class="ti ti-arrow-left" aria-hidden="true"></i>
+    </button>
+    <button
+      class="title"
+      type="button"
+      (click)="homeClicked.emit()"
+      [attr.aria-label]="'common.backToTop' | transloco"
+    >
+      <!-- ブランドロゴ: favicon と同じ六角ナット+F(ヘッダーは青地なので白抜き) -->
+      <svg class="brand-logo" viewBox="0 0 32 32" aria-hidden="true">
+        <path d="M16 1 29 8.5v15L16 31 3 23.5v-15z" fill="currentColor"/>
+        <path d="M12 8h9v3.5h-5.5V15H21v3.5h-5.5V24H12z" fill="var(--tm-primary)"/>
+      </svg>
+      {{ systemName() }}
+    </button>
+    <span class="divider">/</span>
+    <span class="page-title">{{ pageTitle() }}</span>
+  </span>
+  <span class="right">
+    <tm-lang-select variant="on-primary" />
+    <tm-user-menu
+      [userName]="userName()"
+      (topClicked)="homeClicked.emit()"
+      (logoutClicked)="logoutClicked.emit()"
+    />
+  </span>
+</header>
+

@@ -1,0 +1,80 @@
+.wrap {
+  padding: 16px;
+}
+.state {
+  color: var(--tm-text-muted);
+  font-size: 13px;
+  text-align: center;
+  padding: 28px 0;
+  margin: 0;
+}
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+.card {
+  font-family: inherit;
+  text-align: left;
+  border: 1px solid var(--tm-border);
+  border-radius: var(--tm-radius);
+  background: var(--tm-surface);
+  padding: 14px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.card:hover {
+  border-color: var(--tm-primary);
+  box-shadow: 0 0 0 2px var(--tm-primary-tint);
+}
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.card-icon {
+  font-size: 22px;
+  color: var(--tm-primary);
+}
+.conn-badge {
+  font-size: 10px;
+  background: var(--tm-primary-tint);
+  color: var(--tm-primary);
+  border-radius: 3px;
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+.conn-badge.default {
+  background: var(--tm-surface-alt);
+  color: var(--tm-text-muted);
+}
+.card-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tm-text);
+}
+.card-table {
+  font-size: 11px;
+  color: var(--tm-text-secondary);
+}
+.mono {
+  font-family: var(--tm-font-mono);
+}
+.card-desc {
+  font-size: 11px;
+  color: var(--tm-text-muted);
+}
+.empty {
+  grid-column: 1 / -1;
+  font-size: 13px;
+  color: var(--tm-text-muted);
+  border: 1px dashed var(--tm-border-strong);
+  border-radius: var(--tm-radius);
+  padding: 24px;
+  text-align: center;
+  margin: 0;
+}
+
