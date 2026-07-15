@@ -1,0 +1,186 @@
+/* シェル(tm-app-shell)の flex レイアウトに素通しする(自身の箱を持たない)。 */
+:host {
+  display: contents;
+}
+.dashboard-main {
+  flex: 1;
+  min-height: 0;
+  padding: 20px 24px;
+  background: var(--tm-surface);
+}
+.greeting {
+  font-size: 14px;
+  margin: 0 0 16px;
+}
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+.card {
+  position: relative;
+  border: 1px solid var(--tm-border);
+  border-radius: var(--tm-radius);
+  background: var(--tm-surface);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.card:hover {
+  border-color: var(--tm-primary);
+  box-shadow: 0 0 0 2px var(--tm-primary-tint);
+}
+.card.dragging {
+  opacity: 0.4;
+}
+.card-body {
+  font-family: inherit;
+  text-align: left;
+  background: transparent;
+  border: none;
+  padding: 14px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.card-icon {
+  font-size: 22px;
+  color: var(--tm-primary);
+}
+.card-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tm-text);
+}
+.card-name .ext {
+  font-size: 12px;
+  color: var(--tm-text-muted);
+  margin-left: 2px;
+}
+/* 詳細行(テーブル表示名 / URL など)。空でも高さを確保して段を揃える */
+.card-detail {
+  font-size: 11px;
+  color: var(--tm-text-secondary);
+  min-height: 13px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.card-perm {
+  font-size: 11px;
+  color: var(--tm-text-muted);
+  min-height: 13px;
+}
+.link-ops {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: none;
+  gap: 4px;
+}
+.card:hover .link-ops {
+  display: inline-flex;
+}
+.mini {
+  border: 1px solid var(--tm-border);
+  background: var(--tm-surface);
+  border-radius: var(--tm-radius);
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+  color: var(--tm-text-secondary);
+  font-size: 11px;
+  padding: 0;
+}
+.mini.danger {
+  color: var(--tm-danger);
+  border-color: var(--tm-danger);
+}
+.mini.danger:hover {
+  background: var(--tm-danger-bg);
+}
+/* 非表示(テンプレ再選択で復元可)は実削除より軽い操作なので警告色にとどめる */
+.mini.warn {
+  color: var(--tm-warning);
+  border-color: var(--tm-warning);
+}
+.mini.warn:hover {
+  background: var(--tm-warning-bg);
+}
+.empty {
+  grid-column: 1 / -1;
+  font-size: 13px;
+  color: var(--tm-text-muted);
+  border: 1px dashed var(--tm-border-strong);
+  border-radius: var(--tm-radius);
+  padding: 24px;
+  text-align: center;
+  margin: 0;
+}
+.fab {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: none;
+  background: var(--tm-primary);
+  color: var(--tm-text-on-primary);
+  font-size: 24px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+.fab:hover {
+  background: var(--tm-primary-dark);
+}
+/* 並び替えモード: カードがつかめることを示す */
+.cards.editing .card {
+  cursor: grab;
+  border-style: dashed;
+  border-color: var(--tm-primary);
+}
+.cards.editing .card-body {
+  cursor: grab;
+}
+.edit-actions {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  display: flex;
+  gap: 10px;
+  z-index: 50;
+}
+.edit-btn {
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 22px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+.edit-btn.cancel {
+  background: var(--tm-surface);
+  color: var(--tm-text);
+  border: 1px solid var(--tm-border);
+}
+.edit-btn.confirm {
+  background: var(--tm-primary);
+  color: var(--tm-text-on-primary);
+  border: none;
+}
+.edit-btn.confirm:hover {
+  background: var(--tm-primary-dark);
+}
