@@ -1,0 +1,59 @@
+<div class="page">
+  <header class="header">
+    <button
+      class="header-title"
+      type="button"
+      (click)="menuSelected.emit('home')"
+      [attr.aria-label]="'common.backToTop' | transloco"
+    >
+      <!-- サイドバーが閉じている間だけロゴアイコン(F)，開いている間はテキストのみ -->
+      @if (sidebarCollapsed()) {
+        <svg class="brand-logo" viewBox="0 0 32 32" aria-hidden="true">
+          <path d="M6 4H26V10H13V14H22V20H13V28H6Z" fill="currentColor"/>
+        </svg>
+      } @else {
+        {{ systemName() }}
+      }
+    </button>
+    <span class="header-right">
+      <tm-lang-select variant="on-primary" />
+      <tm-user-menu
+        [userName]="userName()"
+        (topClicked)="menuSelected.emit('home')"
+        (logoutClicked)="menuSelected.emit('logout')"
+      />
+    </span>
+  </header>
+
+  <div class="body">
+    <nav class="sidebar" aria-label="メインメニュー" [class.collapsed]="sidebarCollapsed()">
+      <button
+        class="sidebar-toggle"
+        type="button"
+        (click)="toggleSidebar()"
+        [attr.aria-label]="(sidebarCollapsed() ? 'common.sidebarExpand' : 'common.sidebarCollapse') | transloco"
+        [attr.aria-expanded]="!sidebarCollapsed()"
+      >
+        <i class="ti" [class.ti-chevron-right]="sidebarCollapsed()" [class.ti-chevron-left]="!sidebarCollapsed()" aria-hidden="true"></i>
+      </button>
+      @for (item of menuItems(); track item.id) {
+        <button
+          class="menu-item"
+          type="button"
+          [class.active]="item.id === activeMenuId()"
+          [attr.title]="sidebarCollapsed() ? item.label : null"
+          (click)="menuSelected.emit(item.id)"
+        >
+          <i class="ti ti-{{ item.icon }}" aria-hidden="true"></i>
+          @if (!sidebarCollapsed()) {
+            {{ item.label }}
+          }
+        </button>
+      }
+    </nav>
+
+    <main class="main">
+      <ng-content />
+    </main>
+  </div>
+</div>

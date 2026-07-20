@@ -1,0 +1,116 @@
+@if (open()) {
+  <!-- 画面外クリックでは閉じない(誤操作防止)。Esc かボタンで閉じる。 -->
+  <div class="backdrop">
+    <div class="dialog" role="dialog" aria-modal="true">
+      <div class="head">
+        <span class="head-title">
+          <i class="ti" [class]="mode() === 'create' ? 'ti ti-plus' : 'ti ti-pencil'" aria-hidden="true"></i>
+          {{ (mode() === 'create' ? 'rowEdit.createTitle' : 'rowEdit.editTitle') | transloco }}
+        </span>
+        <button class="close" type="button" (click)="cancelled.emit()" [attr.aria-label]="'common.close' | transloco">
+          <i class="ti ti-x" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div class="body">
+        @if (errorMessage(); as msg) {
+          <p class="error">{{ msg }}</p>
+        }
+        @for (col of columns(); track col.name) {
+          <!-- eslint-disable-next-line @angular-eslint/template/label-has-associated-control -- @switch の全分岐に input があるがルールが制御フロー構文を解釈できない(偽陽性) -->
+          <label class="field">
+            <span class="label">
+              {{ col.name }}
+              @if (col.primaryKey) {
+                <span class="pk"><i class="ti ti-key" aria-hidden="true"></i> ID</span>
+              }
+              @if (col.required && !col.readonly && !col.fixed) {
+                <span class="req">{{ 'common.required' | transloco }}</span>
+              }
+              @if (col.fixed) {
+                <span class="ro">{{ 'rowEdit.fixedBadge' | transloco }}</span>
+              } @else if (col.readonly) {
+                <span class="ro">{{ 'common.readonly' | transloco }}</span>
+              }
+            </span>
+            @switch (col.type) {
+              @case ('bool') {
+                <input
+                  type="checkbox"
+                  class="check"
+                  [checked]="asBool(draft()[col.name])"
+                  [disabled]="isLocked(col) || saving()"
+                  (change)="set(col.name, $any($event.target).checked)"
+                />
+              }
+              @case ('int') {
+                <input
+                  type="number"
+                  step="1"
+                  class="input"
+                  [value]="asText(draft()[col.name])"
+                  [disabled]="isLocked(col) || saving()"
+                  (input)="setNumber(col.name, $any($event.target).value)"
+                />
+              }
+              @case ('decimal') {
+                <input
+                  type="number"
+                  step="any"
+                  class="input"
+                  [value]="asText(draft()[col.name])"
+                  [disabled]="isLocked(col) || saving()"
+                  (input)="setNumber(col.name, $any($event.target).value)"
+                />
+              }
+              @case ('date') {
+                <input
+                  type="date"
+                  class="input"
+                  [value]="asDate(draft()[col.name])"
+                  [disabled]="isLocked(col) || saving()"
+                  (input)="setText(col.name, $any($event.target).value)"
+                />
+              }
+              @case ('datetime') {
+                <input
+                  type="datetime-local"
+                  class="input"
+                  [value]="asDateTime(draft()[col.name])"
+                  [disabled]="isLocked(col) || saving()"
+                  (input)="setText(col.name, $any($event.target).value)"
+                />
+              }
+              @default {
+                <input
+                  type="text"
+                  class="input"
+                  [attr.maxlength]="col.maxLength ?? null"
+                  [value]="asText(draft()[col.name])"
+                  [disabled]="isLocked(col) || saving()"
+                  (input)="setText(col.name, $any($event.target).value)"
+                />
+              }
+            }
+          </label>
+        }
+      </div>
+
+      <div class="foot">
+        @if (mode() === 'edit' && canDelete()) {
+          <button class="btn danger" type="button" [disabled]="saving()" (click)="deleteClicked.emit()">
+            <i class="ti ti-trash" aria-hidden="true"></i> {{ 'common.delete' | transloco }}
+          </button>
+        }
+        <span class="spacer"></span>
+        <button class="btn" type="button" [disabled]="saving()" (click)="cancelled.emit()">
+          {{ 'common.cancel' | transloco }}
+        </button>
+        <button class="btn primary" type="button" [disabled]="saving() || !canSave()" (click)="save()">
+          {{ (saving() ? 'common.saving' : 'common.save') | transloco }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+

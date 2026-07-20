@@ -1,0 +1,88 @@
+<div class="dashboard-main">
+  <p class="greeting">{{ greeting() }}</p>
+
+  <div
+    class="cards"
+    [class.editing]="editMode()"
+    (dragover)="onContainerDragOver($event)"
+    (drop)="onDrop($event)"
+  >
+    @for (card of displayCards(); track card.key) {
+      <div
+        class="card"
+        [class.personal]="card.kind === 'mylink' || card.personal"
+        [class.dragging]="dragKey() === card.key"
+        [attr.draggable]="editMode()"
+        [attr.data-key]="card.key"
+        (dragstart)="onDragStart($event, card.key)"
+        (dragover)="onDragOver($event, card.key)"
+        (drop)="onDrop($event)"
+        (dragend)="onDragEnd()"
+      >
+        <button class="card-body" type="button" (click)="onCardClick(card)">
+          <i class="card-icon ti ti-{{ card.icon }}" aria-hidden="true"></i>
+          <span class="card-name">
+            {{ card.name }}
+            @if (card.url) {
+              <i class="ti ti-external-link ext" aria-hidden="true"></i>
+            }
+          </span>
+          <!-- 詳細行: カード種別によらず高さを揃えるため常に描画する -->
+          <span class="card-detail">{{ card.detail }}</span>
+          <span class="card-perm">
+            @if (card.kind === 'function' || card.kind === 'table') {
+              {{ permissionKey(card.permission ?? 'view') | transloco }}
+            } @else if (card.kind === 'mylink') {
+              {{ 'dashboard.myLink' | transloco }}
+            }
+          </span>
+        </button>
+        <!-- リンクの詳細編集(鉛筆)は通常時のみ，削除/非表示(×)は画面編集モード中のみ。
+             × は親カードが draggable の間に出るため，ドラッグに巻き込まれないよう
+             draggable=false を明示する -->
+        <span class="link-ops">
+          @if (!editMode() && card.kind === 'mylink') {
+            <button class="mini" type="button" (click)="linkEditClicked.emit(card)"
+              [attr.aria-label]="'settings.editAria' | transloco">
+              <i class="ti ti-pencil" aria-hidden="true"></i>
+            </button>
+          }
+          @if (editMode() && (card.kind === 'mylink' || card.personal)) {
+            <!-- 個人カードは実削除 -->
+            <button class="mini danger" type="button" draggable="false" (click)="linkDeleteClicked.emit(card)"
+              [attr.aria-label]="'settings.deleteAria' | transloco">
+              <i class="ti ti-x" aria-hidden="true"></i>
+            </button>
+          } @else if (editMode()) {
+            <!-- テンプレ由来/既定機能のカードは非表示化(テンプレ再選択で復元) -->
+            <button class="mini warn" type="button" draggable="false" (click)="cardHideClicked.emit(card)"
+              [attr.aria-label]="'dashboard.hideCardAria' | transloco">
+              <i class="ti ti-x" aria-hidden="true"></i>
+            </button>
+          }
+        </span>
+      </div>
+    } @empty {
+      <p class="empty">{{ 'dashboard.empty' | transloco }}</p>
+    }
+  </div>
+
+  <!-- FAB: 通常は機能選択，並び替え中はキャンセル/決定に切り替わる -->
+  @if (editMode()) {
+    <div class="edit-actions">
+      <button class="edit-btn cancel" type="button" (click)="onEditCancel()">
+        <i class="ti ti-x" aria-hidden="true"></i>
+        {{ 'reorderMode.cancel' | transloco }}
+      </button>
+      <button class="edit-btn confirm" type="button" (click)="onEditConfirm()">
+        <i class="ti ti-check" aria-hidden="true"></i>
+        {{ 'reorderMode.confirm' | transloco }}
+      </button>
+    </div>
+  } @else {
+    <button class="fab" type="button" (click)="fabClicked.emit()"
+      [attr.aria-label]="'dashboard.fabAria' | transloco">
+      <i class="ti ti-plus" aria-hidden="true"></i>
+    </button>
+  }
+</div>
