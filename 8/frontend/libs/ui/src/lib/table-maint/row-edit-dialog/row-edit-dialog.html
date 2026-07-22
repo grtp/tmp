@@ -1,0 +1,109 @@
+<!-- 画面外クリックでは閉じない(誤操作防止。dialog.ts の disableClose)。Esc かボタンで閉じる。 -->
+<h2 mat-dialog-title class="head">
+  <span class="head-title">
+    <mat-icon class="ic" aria-hidden="true">{{ mode === 'create' ? 'add' : 'edit' }}</mat-icon>
+    {{ (mode === 'create' ? 'rowEdit.createTitle' : 'rowEdit.editTitle') | transloco }}
+  </span>
+  <button class="close" type="button" (click)="cancel()" [attr.aria-label]="'common.close' | transloco">
+    <mat-icon class="ic" aria-hidden="true">close</mat-icon>
+  </button>
+</h2>
+
+<mat-dialog-content class="body">
+  @if (errorMessage(); as msg) {
+    <p class="error">{{ msg }}</p>
+  }
+  @for (col of columns; track col.name) {
+    <!-- eslint-disable-next-line @angular-eslint/template/label-has-associated-control -- @switch の全分岐に input があるがルールが制御フロー構文を解釈できない(偽陽性) -->
+    <label class="field">
+      <span class="label">
+        {{ col.name }}
+        @if (col.primaryKey) {
+          <span class="pk"><mat-icon class="ic" aria-hidden="true">key</mat-icon> ID</span>
+        }
+        @if (col.required && !col.readonly && !col.fixed) {
+          <span class="req">{{ 'common.required' | transloco }}</span>
+        }
+        @if (col.fixed) {
+          <span class="ro">{{ 'rowEdit.fixedBadge' | transloco }}</span>
+        } @else if (col.readonly) {
+          <span class="ro">{{ 'common.readonly' | transloco }}</span>
+        }
+      </span>
+      @switch (col.type) {
+        @case ('bool') {
+          <input
+            type="checkbox"
+            class="check"
+            [checked]="asBool(draft()[col.name])"
+            [disabled]="isLocked(col) || saving()"
+            (change)="set(col.name, $any($event.target).checked)"
+          />
+        }
+        @case ('int') {
+          <input
+            type="number"
+            step="1"
+            class="input"
+            [value]="asText(draft()[col.name])"
+            [disabled]="isLocked(col) || saving()"
+            (input)="setNumber(col.name, $any($event.target).value)"
+          />
+        }
+        @case ('decimal') {
+          <input
+            type="number"
+            step="any"
+            class="input"
+            [value]="asText(draft()[col.name])"
+            [disabled]="isLocked(col) || saving()"
+            (input)="setNumber(col.name, $any($event.target).value)"
+          />
+        }
+        @case ('date') {
+          <input
+            type="date"
+            class="input"
+            [value]="asDate(draft()[col.name])"
+            [disabled]="isLocked(col) || saving()"
+            (input)="setText(col.name, $any($event.target).value)"
+          />
+        }
+        @case ('datetime') {
+          <input
+            type="datetime-local"
+            class="input"
+            [value]="asDateTime(draft()[col.name])"
+            [disabled]="isLocked(col) || saving()"
+            (input)="setText(col.name, $any($event.target).value)"
+          />
+        }
+        @default {
+          <input
+            type="text"
+            class="input"
+            [attr.maxlength]="col.maxLength ?? null"
+            [value]="asText(draft()[col.name])"
+            [disabled]="isLocked(col) || saving()"
+            (input)="setText(col.name, $any($event.target).value)"
+          />
+        }
+      }
+    </label>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions class="foot">
+  @if (mode === 'edit' && canDelete) {
+    <button class="btn danger" type="button" [disabled]="saving()" (click)="deleteClicked.emit()">
+      <mat-icon class="ic" aria-hidden="true">delete</mat-icon> {{ 'common.delete' | transloco }}
+    </button>
+  }
+  <span class="spacer"></span>
+  <button class="btn" type="button" [disabled]="saving()" (click)="cancel()">
+    {{ 'common.cancel' | transloco }}
+  </button>
+  <button class="btn primary" type="button" [disabled]="saving() || !canSave()" (click)="save()">
+    {{ (saving() ? 'common.saving' : 'common.save') | transloco }}
+  </button>
+</mat-dialog-actions>

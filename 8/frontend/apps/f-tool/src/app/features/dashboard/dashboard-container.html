@@ -1,0 +1,13 @@
+<tm-dashboard-page
+  [greeting]="greeting()"
+  [cards]="cards()"
+  [editMode]="editMode()"
+  [emptyKey]="emptyKey()"
+  (cardSelected)="onCard($event)"
+  (linkEditClicked)="openLinkEdit($event)"
+  (linkDeleteClicked)="askCardDelete($event)"
+  (orderChanged)="onOrderChanged($event)"
+  (editExited)="editMode.set(false)"
+  (fabClicked)="openAddFeature()"
+/>
+

@@ -1,0 +1,42 @@
+<!-- 画面外クリックでは閉じない(誤操作防止。dialog.ts の disableClose)。Esc かボタンで閉じる。 -->
+<h2 mat-dialog-title class="head">
+  <span class="head-title">
+    <mat-icon class="ic" aria-hidden="true">dashboard</mat-icon>
+    {{ 'templateSelect.title' | transloco }}
+  </span>
+  <button class="close" type="button" (click)="cancel()" [attr.aria-label]="'common.close' | transloco">
+    <mat-icon class="ic" aria-hidden="true">close</mat-icon>
+  </button>
+</h2>
+
+<mat-dialog-content class="body">
+  <button class="entry" type="button" [class.selected]="selectedId === null"
+    (click)="templateSelected.emit(null)">
+    <mat-icon class="entry-icon ic" aria-hidden="true">grid_view</mat-icon>
+    <span class="entry-text">
+      <span class="entry-name">{{ 'templateSelect.default' | transloco }}</span>
+      <span class="entry-desc">{{ 'templateSelect.defaultDesc' | transloco }}</span>
+    </span>
+    @if (selectedId === null) {
+      <mat-icon class="check ic" aria-hidden="true">check</mat-icon>
+    }
+  </button>
+
+  @for (t of templates; track t.id) {
+    <button class="entry" type="button" [class.selected]="selectedId === t.id"
+      (click)="templateSelected.emit(t.id)">
+      <mat-icon class="entry-icon ic" aria-hidden="true">dashboard</mat-icon>
+      <span class="entry-text">
+        <span class="entry-name">{{ t.name }}</span>
+        @if (t.description) {
+          <span class="entry-desc">{{ t.description }}</span>
+        }
+      </span>
+      @if (selectedId === t.id) {
+        <mat-icon class="check ic" aria-hidden="true">check</mat-icon>
+      }
+    </button>
+  } @empty {
+    <p class="muted">{{ 'templateSelect.empty' | transloco }}</p>
+  }
+</mat-dialog-content>

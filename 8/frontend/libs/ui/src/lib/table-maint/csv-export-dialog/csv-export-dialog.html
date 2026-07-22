@@ -1,0 +1,48 @@
+<!-- 画面外クリックでは閉じない(誤操作防止。dialog.ts の disableClose)。Esc かボタンで閉じる。 -->
+<h2 mat-dialog-title class="head">
+  <span class="head-title">
+    <mat-icon class="ic" aria-hidden="true">download</mat-icon>
+    {{ 'csvExport.title' | transloco }}
+  </span>
+  <button class="close" type="button" (click)="cancel()" [attr.aria-label]="'common.close' | transloco">
+    <mat-icon class="ic" aria-hidden="true">close</mat-icon>
+  </button>
+</h2>
+
+<mat-dialog-content class="body">
+  <label class="check-field">
+    <input type="checkbox" [checked]="excelCompat()" (change)="excelCompat.set($any($event.target).checked)" />
+    <span>{{ 'csvExport.excelCompat' | transloco }}</span>
+  </label>
+  <p class="hint">{{ 'csvExport.excelCompatHint' | transloco }}</p>
+
+  <button class="entry" type="button" [disabled]="selectionCount === 0 || busy()" (click)="choose('selection')">
+    <mat-icon class="entry-icon ic" aria-hidden="true">checklist</mat-icon>
+    <span class="entry-text">
+      <span class="entry-name">{{ 'csvExport.selection' | transloco }}</span>
+      <span class="entry-desc">{{ 'csvExport.selectionDesc' | transloco: { count: selectionCount } }}</span>
+    </span>
+  </button>
+
+  <button class="entry" type="button" [disabled]="busy()" (click)="choose('page')">
+    <mat-icon class="entry-icon ic" aria-hidden="true">description</mat-icon>
+    <span class="entry-text">
+      <span class="entry-name">{{ 'csvExport.page' | transloco }}</span>
+      <span class="entry-desc">{{ 'csvExport.pageDesc' | transloco: { count: pageCount } }}</span>
+    </span>
+  </button>
+
+  <button class="entry" type="button" [disabled]="busy()" (click)="choose('all')">
+    <mat-icon class="entry-icon ic" aria-hidden="true">backup_table</mat-icon>
+    <span class="entry-text">
+      <span class="entry-name">{{ 'csvExport.all' | transloco }}</span>
+      <span class="entry-desc">{{ 'csvExport.allDesc' | transloco }}</span>
+    </span>
+  </button>
+</mat-dialog-content>
+
+<mat-dialog-actions class="foot">
+  <button class="btn" type="button" [disabled]="busy()" (click)="cancel()">
+    {{ 'common.cancel' | transloco }}
+  </button>
+</mat-dialog-actions>

@@ -1,0 +1,109 @@
+/* table-maint デザイントークン (A案: クラシック業務系) */
+:root {
+  /* brand */
+  --tm-primary: #3e69ad;
+  --tm-primary-dark: #2e5089;
+  --tm-primary-tint: rgba(62, 105, 173, 0.14);
+  --tm-primary-tint-weak: rgba(62, 105, 173, 0.07);
+
+  /* surfaces */
+  --tm-surface: #ffffff;
+  --tm-surface-alt: #f5f6f8;
+  --tm-page-bg: #eef0f3;
+
+  /* text */
+  --tm-text: #1f2329;
+  --tm-text-secondary: #5c6470;
+  --tm-text-muted: #8a919c;
+  --tm-text-on-primary: #ffffff;
+
+  /* semantic */
+  --tm-danger: #c0392b;
+  --tm-danger-bg: #fdecea;
+  --tm-warning: #b45309;
+  --tm-warning-bg: #fdf3e0;
+  --tm-success: #2e7d4f;
+  --tm-success-bg: #e7f3ec;
+
+  /* border / shape */
+  --tm-border: #d9dce1;
+  --tm-border-strong: #b9bec7;
+  --tm-radius: 0.375rem;
+
+  /* typography */
+  --tm-font:
+    "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic UI",
+    "Meiryo", sans-serif;
+  --tm-font-mono: "SF Mono", "Consolas", "Noto Sans Mono CJK JP", monospace;
+}
+
+/* 表示スケール: 全コンポーネントの寸法は rem ベース(1px ヘアラインを除く)。
+   ここを変えると全部品が比例して拡大/縮小する(125% = 16px x 1.25 = 20px 基準)。 */
+html {
+  font-size: 125%;
+}
+
+body {
+  font-family: var(--tm-font);
+  color: var(--tm-text);
+  margin: 0;
+}
+
+/* インラインアイコン(mat-icon.ic): 旧 <i class="ti"> と同様に周囲の
+   テキストサイズへ追従させる。Material 部品内部の mat-icon(ic なし)は
+   部品側の寸法に任せるため，ic を付けたものだけを上書きする。 */
+mat-icon.ic {
+  width: 1em;
+  height: 1em;
+  font-size: 1.2em;
+  line-height: 1;
+  vertical-align: -0.2em;
+  overflow: visible;
+}
+
+/* mat-select のドロップダウンパネル(mat-option): CDK オーバーレイで
+   <body> 直下に描画されるため，コンポーネント側の CSS(::ng-deep 含む)は
+   一切届かない。フォントサイズはここで全画面共通の値に揃える。
+   幅は各 <mat-select panelWidth=""> 側で「内容に合わせて広がる」よう
+   指定すること(既定/"auto" はトリガー幅に固定され，日本語ラベルが
+   折り返って崩れる)。 */
+.mat-mdc-select-panel,
+.mat-mdc-option {
+  font-size: 0.8125rem;
+}
+
+/* mat-dialog-title(.mdc-dialog__title)には MDC がベースライン調整用の
+   空 ::before(width:0 の疑似要素)を自動挿入する。全ダイアログの
+   `.head` は display:flex + justify-content:space-between で
+   戻る/閉じるボタンを両端に配置しているため，この不可視の ::before が
+   3つ目の flex item として数えられてしまい，中身(.head-title)が
+   左端から不自然に浮いて見える(space-between が3分割になるため)。
+   ベースライン調整はこちらでは不要なので疑似要素ごと消す。 */
+/* Material 側は .mat-mdc-dialog-title::before(クラス1つ+疑似要素)として
+   同じ要素に定義を持ち，CDK が adoptedStyleSheets 経由で後から差し込むため
+   同じ詳細度では常に Material 側が勝つ。`.head` と 2 クラス指定にして
+   詳細度で確実に上書きする。 */
+.head.mat-mdc-dialog-title::before {
+  content: none;
+}
+
+/* mat-dialog-content(.mat-mdc-dialog-content)は既定で padding-top を
+   0 にする(通常はタイトル側の余白で間隔を確保する Material の設計だが，
+   このアプリの `.head` はタイトル側を padding-bottom のみで詰めているため，
+   本文側の上余白が丸ごと無くなり，1つ目の要素が仕切り線に密着して見える)。
+   Material 既定は `.mat-mdc-dialog-container .mat-mdc-dialog-title + .mat-mdc-dialog-content`
+   (クラス3つ)という詳細度で adoptedStyleSheets に入るため，`.body` クラスを
+   付けている本文領域だけ，同じ構造(クラス4つ)で明示的に上余白を戻す。 */
+.mat-mdc-dialog-container .mat-mdc-dialog-title + .body.mat-mdc-dialog-content {
+  padding-top: 0.75rem;
+}
+
+/* トースト(MatSnackBar)の結果色。オーバーレイ描画のためグローバルに置く。 */
+.toast-ok {
+  --mat-snack-bar-container-color: var(--tm-success);
+  --mat-snack-bar-supporting-text-color: #ffffff;
+}
+.toast-ng {
+  --mat-snack-bar-container-color: var(--tm-danger);
+  --mat-snack-bar-supporting-text-color: #ffffff;
+}

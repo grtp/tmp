@@ -1,0 +1,28 @@
+<!-- 画面外クリックでは閉じない(誤操作防止。dialog.ts の disableClose)。Esc かボタンで閉じる。 -->
+<h2 mat-dialog-title class="head">
+  <span class="head-title">
+    <mat-icon class="ic" aria-hidden="true">table_view</mat-icon>
+    {{ 'tablePick.title' | transloco }}
+  </span>
+  <button class="close" type="button" (click)="cancel()" [attr.aria-label]="'common.close' | transloco">
+    <mat-icon class="ic" aria-hidden="true">close</mat-icon>
+  </button>
+</h2>
+
+<mat-dialog-content class="body">
+  @for (t of tables; track t.id) {
+    <button class="entry" type="button" (click)="tablePicked.emit(t)">
+      <mat-icon class="entry-icon ic" aria-hidden="true">table_view</mat-icon>
+      <span class="entry-text">
+        <span class="entry-name">{{ t.displayName }}</span>
+        <span class="entry-desc mono">
+          @if (t.connectionName) {
+            {{ t.connectionName }}:
+          }{{ t.schemaName }}.{{ t.tableName }}
+        </span>
+      </span>
+    </button>
+  } @empty {
+    <p class="muted">{{ 'tablePick.empty' | transloco }}</p>
+  }
+</mat-dialog-content>
