@@ -1,0 +1,28 @@
+@if (errorMessage(); as msg) {
+  <p class="error">{{ msg }}</p>
+}
+
+<tm-data-table-page
+  [tableNames]="[]"
+  [selectedTable]="tableLabel()"
+  [columns]="columnDefs()"
+  [rows]="displayRows()"
+  [pendingRows]="pendingDisplayRows()"
+  [totalCount]="total()"
+  [page]="page()"
+  [pageSize]="pageSize()"
+  [loading]="loading()"
+  [canCreate]="writable()"
+  [insertBlockedColumns]="meta()?.insertBlockedColumns ?? []"
+  [storageKey]="storageKey()"
+  (filtersChanged)="onFiltersChanged($event)"
+  (pageChanged)="onPageChanged($event)"
+  (pageSizeChanged)="onPageSizeChanged($event)"
+  (createClicked)="onCreate()"
+  (rowSelected)="onRowSelected($event)"
+  (bulkDeleteClicked)="askBulkDelete($event)"
+  (savePendingClicked)="onSavePending($event)"
+  (csvExportClicked)="openCsvExport($event)"
+  (csvFileSelected)="onCsvFile($event)"
+/>
+

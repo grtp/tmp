@@ -1,0 +1,50 @@
+.page {
+  min-height: 100vh;
+  background: var(--tm-page-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  box-sizing: border-box;
+}
+.card {
+  background: var(--tm-surface);
+  border: 1px solid var(--tm-border);
+  border-top: 0.1875rem solid var(--tm-primary);
+  border-radius: var(--tm-radius);
+  padding: 1.75rem 2rem 1.5rem;
+  width: 20rem;
+}
+.title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 1.25rem;
+  text-align: center;
+}
+.error {
+  font-size: 0.75rem;
+  color: var(--tm-danger);
+  background: var(--tm-danger-bg);
+  border-radius: var(--tm-radius);
+  padding: 0.5rem 0.625rem;
+  margin: 0 0 0.875rem;
+}
+.field {
+  width: 100%;
+  margin-bottom: 0.75rem;
+}
+.submit {
+  width: 100%;
+  margin-top: 0.5rem;
+}
+.note {
+  font-size: 0.6875rem;
+  color: var(--tm-text-muted);
+  text-align: center;
+  margin: 0.875rem 0 0;
+}
+.langs {
+  margin-top: 0.625rem;
+  text-align: center;
+}
+

@@ -1,0 +1,323 @@
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1rem 0.75rem;
+  margin: 0;
+  border-bottom: 1px solid var(--tm-border);
+}
+.head-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.close {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--tm-text-secondary);
+  font-size: 1rem;
+}
+.body {
+  padding: 0.75rem 1rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+.error {
+  margin: 0;
+  padding: 0.5rem 0.625rem;
+  background: var(--tm-danger-bg);
+  color: var(--tm-danger);
+  border-radius: var(--tm-radius);
+  font-size: 0.75rem;
+}
+.filters {
+  display: flex;
+  gap: 0.75rem;
+}
+.filter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.filter.grow {
+  flex: 1;
+}
+.select {
+  height: 2rem;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  border: 1px solid var(--tm-border);
+  border-radius: var(--tm-radius);
+  padding: 0 0.5rem;
+  background: var(--tm-surface);
+  color: var(--tm-text);
+  min-width: 11.25rem;
+}
+.columns2 {
+  display: grid;
+  grid-template-columns: 16.25rem 1fr;
+  gap: 0.75rem;
+  min-height: 12.5rem;
+}
+.pane {
+  border: 1px solid var(--tm-border);
+  border-radius: var(--tm-radius);
+  padding: 0.5rem;
+  overflow-y: auto;
+  max-height: 16.25rem;
+}
+.pane-title {
+  margin: 0 0 0.375rem;
+  font-size: 0.6875rem;
+  color: var(--tm-text-muted);
+}
+.candidates {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+.cand {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: var(--tm-radius);
+  padding: 0.375rem 0.5rem;
+  font-size: 0.75rem;
+  font-family: inherit;
+  cursor: pointer;
+  color: var(--tm-text);
+  display: flex;
+  justify-content: space-between;
+  gap: 0.375rem;
+}
+.cand:hover:not(:disabled) {
+  background: var(--tm-primary-tint-weak);
+}
+.cand.selected {
+  background: var(--tm-primary-tint);
+}
+.cand:disabled {
+  color: var(--tm-text-muted);
+  cursor: default;
+}
+.nopk {
+  font-size: 0.625rem;
+  color: var(--tm-danger);
+}
+.mono {
+  font-family: var(--tm-font-mono);
+}
+.muted {
+  color: var(--tm-text-muted);
+  font-size: 0.75rem;
+}
+.pk {
+  font-size: 0.75rem;
+  margin: 0 0 0.375rem;
+}
+.badge {
+  font-size: 0.625rem;
+  background: var(--tm-primary-tint);
+  color: var(--tm-primary);
+  border-radius: 0.1875rem;
+  padding: 1px 0.3125rem;
+  margin-left: 0.375rem;
+}
+.cols {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.6875rem;
+}
+.cols th {
+  text-align: left;
+  color: var(--tm-text-muted);
+  font-weight: 600;
+  padding: 0.1875rem 0.375rem;
+  border-bottom: 1px solid var(--tm-border);
+  border-right: 1px solid var(--tm-border);
+}
+.cols th:last-child {
+  border-right: none;
+}
+.cols td {
+  padding: 0.1875rem 0.375rem;
+  border-bottom: 1px solid var(--tm-border);
+  border-right: 1px solid var(--tm-border);
+}
+.cols td:last-child {
+  border-right: none;
+}
+/* NULL 列は Yes/No(可/不可)だけなので狭くし，その分をモード列へ回す。 */
+.cols th:nth-child(3),
+.cols td:nth-child(3) {
+  width: 3rem;
+}
+/* 列モード列は固定値の 2x2 グリッドが収まる幅を常に確保しておく
+   (モード切替で列幅が伸縮しないようにするため)。
+   18rem は英語ラベル "Current time on save" が余裕を持って収まる幅。 */
+.cols th:last-child,
+.cols td:last-child {
+  width: 18rem;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.label {
+  font-size: 0.75rem;
+  color: var(--tm-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+.req {
+  color: var(--tm-danger);
+  font-size: 0.625rem;
+  border: 1px solid currentColor;
+  border-radius: 0.1875rem;
+  padding: 0 0.25rem;
+}
+.input {
+  height: 2rem;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  border: 1px solid var(--tm-border);
+  border-radius: var(--tm-radius);
+  padding: 0 0.5rem;
+  color: var(--tm-text);
+}
+.input:focus {
+  outline: none;
+  border-color: var(--tm-primary);
+  box-shadow: 0 0 0 0.125rem var(--tm-primary-tint);
+}
+.foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--tm-border);
+}
+.btn {
+  height: 2rem;
+  padding: 0 0.875rem;
+  border: 1px solid var(--tm-border);
+  border-radius: var(--tm-radius);
+  background: var(--tm-surface);
+  color: var(--tm-text);
+  font-size: 0.8125rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.btn.primary {
+  background: var(--tm-primary);
+  border-color: var(--tm-primary);
+  color: var(--tm-text-on-primary);
+}
+
+.pii-note {
+  margin: 0.25rem 0 0;
+  padding: 0.375rem 0.625rem;
+  font-size: 0.6875rem;
+  color: var(--tm-text-secondary);
+  background: var(--tm-surface-alt);
+  border-radius: var(--tm-radius);
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+.pii-note .ic {
+  color: var(--tm-danger);
+  font-size: 0.875rem;
+}
+
+/* ------------------------------------------------------------- 列モード */
+.mode-select {
+  font-size: 0.75rem;
+  padding: 0.125rem 0.25rem;
+  border: 1px solid var(--tm-border);
+  border-radius: 0.25rem;
+  background: var(--tm-surface);
+  color: var(--tm-text);
+}
+/* 固定値選択時は 2x2 グリッド: [モード][適用タイミング] / [種別][値]。
+   均等2列で全コントロールをセル幅いっぱいに揃える(モード=種別と同幅)。
+   値なし(現在時刻)のときは2行目が左詰めになる。 */
+.mode-cell.fixed {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.25rem;
+}
+.mode-cell.fixed .mode-select,
+.mode-cell.fixed .fixed-value {
+  width: 100%;
+  box-sizing: border-box;
+}
+.fixed-value {
+  font-size: 0.75rem;
+  padding: 0.125rem 0.375rem;
+  border: 1px solid var(--tm-border);
+  border-radius: 0.25rem;
+  background: var(--tm-surface);
+  color: var(--tm-text);
+}
+.mode-fixed {
+  font-size: 0.6875rem;
+  color: var(--tm-text-secondary);
+}
+.cols tr.hidden-row td {
+  color: var(--tm-text-secondary);
+  text-decoration: line-through;
+  text-decoration-color: rgba(150, 150, 150, 0.6);
+}
+.cols tr.hidden-row td:last-child {
+  text-decoration: none;
+}
+.mode-warn {
+  margin: 0.375rem 0 0;
+  font-size: 0.75rem;
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: 0.375rem;
+  padding: 0.375rem 0.5rem;
+}
+
+/* ------------------------------------------------- 編集モード(対象固定) */
+.edit-target {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin: 0;
+  padding: 0.5rem 0.625rem;
+  background: var(--tm-surface-alt);
+  border: 1px solid var(--tm-border);
+  border-radius: var(--tm-radius);
+  font-size: 0.75rem;
+}
+.edit-target .label {
+  color: var(--tm-text-secondary);
+}
+.conn-badge {
+  display: inline-block;
+  font-size: 0.6875rem;
+  padding: 1px 0.375rem;
+  border-radius: 62.4375rem;
+  background: var(--tm-primary-tint);
+  color: var(--tm-primary);
+  margin-right: 0.25rem;
+}
+.columns2.single {
+  grid-template-columns: 1fr;
+}
