@@ -1,0 +1,391 @@
+/* シェル(tm-app-shell)の flex レイアウトに素通しする(自身の箱を持たない)。 */
+:host {
+  display: contents;
+}
+/* 画面内に収め，テーブル部分だけを内部スクロールにする(ヘッダー固定のため) */
+.panel {
+  background: var(--tm-surface);
+  border: 1px solid var(--tm-border);
+  border-radius: var(--tm-radius);
+  overflow: hidden;
+  margin: 1rem;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 4.875rem);
+  /* CSV の drag&drop オーバーレイ(.drop-overlay)の位置基準 */
+  position: relative;
+}
+/* CSV の drag&drop 受付中に全面へ被せる案内。pointer-events: none で
+   下の要素への dragleave/drop 判定を妨げない(判定は .panel が持つ)。 */
+.drop-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: var(--tm-primary-tint);
+  border: 2px dashed var(--tm-primary);
+  border-radius: var(--tm-radius);
+  color: var(--tm-primary);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  pointer-events: none;
+}
+.toolbar {
+  padding: 0.625rem 0.75rem;
+  border-bottom: 1px solid var(--tm-border);
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-shrink: 0;
+  container-type: inline-size;
+}
+/* 幅が足りない時はラベルを隠しアイコンのみにする(折り返しでボタンが
+   縦に伸びて見た目が崩れるのを防ぐ)。ホバー時は title でラベルを見せる。 */
+@container (max-width: 47.5rem) {
+  .toolbar .lbl {
+    display: none;
+  }
+  .toolbar button.mat-mdc-button-base {
+    min-width: unset;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+  }
+  .toolbar button mat-icon.ic {
+    margin-right: 0;
+    margin-left: 0;
+  }
+}
+.filter-toggle {
+  position: relative;
+  /* mat-icon-button 既定はインラインレイアウト(text-align)でアイコンを
+     置くため,mat-icon.ic の vertical-align: -0.2em(本文中用のベース
+     ライン合わせ)と丸めが重なり,画面幅・拡大率によってはフォーカス/
+     ホバー円に対しアイコンが 1px 前後ずれて見える。flex で中央固定する。 */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.filter-toggle mat-icon.ic {
+  vertical-align: 0;
+}
+.filter-toggle.active {
+  color: var(--tm-primary);
+  border-color: var(--tm-primary);
+  background: var(--tm-primary-tint);
+}
+.filter-count {
+  position: absolute;
+  top: -0.375rem;
+  right: -0.375rem;
+  min-width: 1rem;
+  height: 1rem;
+  border-radius: 0.5rem;
+  background: var(--tm-primary);
+  color: var(--tm-text-on-primary);
+  font-size: 0.625rem;
+  line-height: 1rem;
+  padding: 0 0.25rem;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  align-items: center;
+  padding: 0.375rem 0.75rem;
+  border-bottom: 1px solid var(--tm-border);
+  background: var(--tm-surface-alt);
+  flex-shrink: 0;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  background: var(--tm-primary-tint);
+  color: var(--tm-text);
+  border: 1px solid var(--tm-primary);
+  border-radius: 0.75rem;
+  padding: 0.125rem 0.25rem 0.125rem 0.5rem;
+}
+.chip-label {
+  color: var(--tm-text-secondary);
+}
+.chip-value {
+  font-family: var(--tm-font-mono);
+  max-width: 10rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chip-x {
+  border: none;
+  background: transparent;
+  color: var(--tm-text-secondary);
+  cursor: pointer;
+  font-size: 0.6875rem;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.chip-x:hover {
+  background: var(--tm-primary);
+  color: var(--tm-text-on-primary);
+}
+.chips-clear {
+  border: none;
+  background: transparent;
+  color: var(--tm-primary);
+  font-size: 0.6875rem;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 0.125rem 0.375rem;
+}
+.chips-clear:hover {
+  text-decoration: underline;
+}
+.table-select {
+  height: 2.125rem;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  border: 1px solid var(--tm-border);
+  border-radius: var(--tm-radius);
+  padding: 0 0.5rem;
+  background: var(--tm-surface);
+  color: var(--tm-text);
+  width: 10rem;
+}
+.table-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0 0.25rem;
+  white-space: nowrap;
+  /* ボタン群を優先し，収まらない分はラベル側を…で省略する。
+     min-width:0 が無いとフレックス項目は内容の全幅を最小幅と見なし
+     縮まないため，overflow/text-overflow が効かない。 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+/* ボタンはラベルより優先して幅を保つ(縮めない)。 */
+.toolbar > button {
+  flex-shrink: 0;
+}
+.spacer {
+  flex: 1;
+}
+.table-select:focus {
+  outline: none;
+  border-color: var(--tm-primary);
+  box-shadow: 0 0 0 0.125rem var(--tm-primary-tint);
+}
+.bulk-delete {
+  --mat-button-filled-container-color: var(--tm-danger);
+  --mat-button-filled-label-text-color: var(--tm-text-on-primary);
+}
+.file-input {
+  display: none;
+}
+.multi-toggle.active {
+  color: var(--tm-primary);
+  border-color: var(--tm-primary);
+  background: var(--tm-primary-tint);
+}
+.table-wrap {
+  overflow: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+/* 列幅は tmAutoFit(resize directive)が内容幅で確定する:
+   各列 = 内容幅(90〜30rem)，余白は最終列が吸収して右端まで届く。
+   列数が多く収まらない場合は最終列も内容幅になり table-wrap が横スクロール。 */
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.75rem;
+  table-layout: fixed;
+}
+/* スクロールしてもヘッダー(+フィルタ行)を固定表示する */
+thead th {
+  position: sticky;
+  z-index: 2;
+}
+th {
+  background: var(--tm-primary);
+  color: var(--tm-text-on-primary);
+  font-weight: 600;
+  text-align: left;
+  top: 0;
+  height: 2.125rem;
+  padding: 0 0.625rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-right: 1px solid rgba(255, 255, 255, 0.25);
+}
+th:last-child {
+  border-right: none;
+}
+.filter-row th {
+  top: 2.125rem;
+  height: auto;
+  background: var(--tm-surface-alt);
+  padding: 0.25rem 0.375rem;
+  border-right: 1px solid var(--tm-border);
+  border-bottom: 1px solid var(--tm-border);
+}
+.filter-row th:last-child {
+  border-right: none;
+}
+/* チェック列は固定幅(チェックボックスよりわずかに広い程度)。
+   収縮ルールより優先させるため th/td 付きで詳細度を上げる */
+th.check-th,
+td.check-td {
+  width: 1.375rem;
+  min-width: 1.375rem;
+  max-width: 1.375rem;
+  text-align: center;
+  padding: 0;
+}
+/* DB 未反映((*))マーク: 先頭列(通常 ID/主キー)のセル内に表示 */
+.pending-mark {
+  color: var(--tm-danger);
+  font-weight: 700;
+  margin-right: 0.25rem;
+}
+/* DB 未反映((*))の行 */
+tbody tr.pending {
+  background: var(--tm-primary-tint);
+}
+tbody tr.pending:hover {
+  background: var(--tm-primary-tint);
+  cursor: default;
+}
+/* ドラッグ範囲選択中のテキスト選択を抑止 */
+tbody.no-select {
+  user-select: none;
+}
+.check-th input,
+.check-td input {
+  cursor: pointer;
+  vertical-align: middle;
+}
+tbody tr.checked {
+  background: var(--tm-primary-tint);
+}
+tbody tr.checked:hover {
+  background: var(--tm-primary-tint);
+}
+.filter-input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 1.625rem;
+  font-size: 0.75rem;
+  font-family: inherit;
+  border: 1px solid var(--tm-border);
+  border-radius: var(--tm-radius);
+  padding: 0 0.375rem;
+  background: var(--tm-surface);
+  color: var(--tm-text);
+}
+.filter-input:focus {
+  outline: none;
+  border-color: var(--tm-primary);
+  box-shadow: 0 0 0 1px var(--tm-primary-tint);
+}
+td {
+  padding: 0.375rem 0.625rem;
+  border-bottom: 1px solid var(--tm-border);
+  border-right: 1px solid var(--tm-border);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+td:last-child {
+  border-right: none;
+}
+tbody tr {
+  cursor: pointer;
+}
+tbody tr:hover {
+  background: var(--tm-primary-tint-weak);
+}
+tbody tr.odd {
+  background: var(--tm-surface-alt);
+}
+tbody tr.odd:hover {
+  background: var(--tm-primary-tint-weak);
+}
+.mono {
+  font-family: var(--tm-font-mono);
+}
+.state-cell {
+  text-align: center;
+  color: var(--tm-text-muted);
+  padding: 1.75rem 0.625rem;
+  cursor: default;
+}
+.footer {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.6875rem;
+  color: var(--tm-text-muted);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--tm-border);
+  flex-shrink: 0;
+}
+.footer-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+.page-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+.page-size-select,
+.page-jump-select {
+  height: 1.5rem;
+  font-size: 0.6875rem;
+  font-family: inherit;
+  border: 1px solid var(--tm-border);
+  border-radius: var(--tm-radius);
+  background: var(--tm-surface);
+  color: var(--tm-text);
+  padding: 0 0.25rem;
+}
+.pager {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+.pager-btn {
+  border: 1px solid var(--tm-border);
+  background: var(--tm-surface);
+  border-radius: var(--tm-radius);
+  width: 1.5rem;
+  height: 1.5rem;
+  cursor: pointer;
+  color: var(--tm-text-secondary);
+  font-family: inherit;
+}
+.pager-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* 必須列が除外されているテーブル: 新規/CSV取込を無効表示(ホバーで理由) */
+.toolbar button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
