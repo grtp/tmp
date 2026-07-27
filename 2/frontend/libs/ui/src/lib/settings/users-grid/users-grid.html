@@ -1,0 +1,41 @@
+<tm-data-table-page
+  [selectedTable]="title()"
+  [columns]="columnDefs()"
+  [rows]="displayRows()"
+  [totalCount]="totalCount()"
+  [page]="page()"
+  [pageSize]="pageSize()"
+  [loading]="loading()"
+  [canCreate]="false"
+  [showMultiSelect]="false"
+  [showCsvExport]="false"
+  [filterColumns]="filterColumns()"
+  [predicates]="predicates()"
+  [storageKey]="storageKey()"
+  (predicatesChange)="predicatesChange.emit($event)"
+  (pageChanged)="pageChanged.emit($event)"
+  (pageSizeChanged)="pageSizeChanged.emit($event)"
+/>
+
+<!-- ユーザーセル: 表示名 + ユーザーID -->
+<ng-template #userTpl let-row>
+  <span class="user-name">{{ rowOf(row)?.displayName }}</span>
+  <span class="user-id mono"> {{ rowOf(row)?.username }}</span>
+</ng-template>
+
+<!-- 権限セル: 機能ごとのレベル選択(列は actions から動的生成。col.meta = actionId) -->
+<ng-template #levelTpl let-row let-col="col">
+  <mat-form-field class="level-field" appearance="outline" subscriptSizing="dynamic">
+    <mat-select
+      class="level"
+      panelWidth=""
+      [value]="levelOf(row, col)"
+      (valueChange)="onLevelChange(row, col, $event)"
+    >
+      <mat-option value="">{{ 'settings.levelNone' | transloco }}</mat-option>
+      <mat-option value="user">{{ 'settings.levelUser' | transloco }}</mat-option>
+      <mat-option value="maintainer">{{ 'settings.levelMaintainer' | transloco }}</mat-option>
+      <mat-option value="admin">{{ 'settings.levelAdmin' | transloco }}</mat-option>
+    </mat-select>
+  </mat-form-field>
+</ng-template>

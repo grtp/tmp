@@ -1,0 +1,23 @@
+.head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+.icon {
+  color: var(--tm-primary);
+}
+.icon.danger {
+  color: var(--tm-danger);
+}
+.message {
+  font-size: 0.8125rem;
+  color: var(--tm-text-secondary);
+  margin: 0;
+  white-space: pre-line;
+}
+.confirm-btn.danger {
+  --mat-button-filled-container-color: var(--tm-danger);
+  --mat-button-filled-label-text-color: var(--tm-text-on-primary);
+}

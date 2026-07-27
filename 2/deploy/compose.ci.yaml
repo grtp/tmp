@@ -1,0 +1,42 @@
+# CI 用の使い捨て Gitea + ランナー。ジョブは docker executor 方式で
+# ジョブごとに使い捨てコンテナ(localhost/ftool-ci)を起こして実行する。
+# 起動・撤去手順は docs/development-guide.md §5.5 参照。
+name: ftci
+services:
+  gitea:
+    image: docker.io/gitea/gitea:1.24
+    container_name: ft-gitea
+    environment:
+      GITEA__security__INSTALL_LOCK: "true"
+      GITEA__server__ROOT_URL: http://localhost:3300/
+      GITEA__server__HTTP_PORT: "3000"
+      GITEA__server__DISABLE_SSH: "true"
+      GITEA__service__DISABLE_REGISTRATION: "true"
+      GITEA__actions__ENABLED: "true"
+    ports:
+      - "3300:3000"
+    volumes:
+      - gitea-data:/data
+  runner:
+    image: docker.io/gitea/act_runner:latest
+    container_name: ft-ci-runner
+    depends_on:
+      - gitea
+    environment:
+      GITEA_INSTANCE_URL: http://gitea:3000
+      # 初回登録トークン。deploy/.env に置く(gitignore 済み)。
+      GITEA_RUNNER_REGISTRATION_TOKEN: ${GITEA_RUNNER_REGISTRATION_TOKEN}
+      GITEA_RUNNER_NAME: ftool-runner
+      CONFIG_FILE: /config.yaml
+      DOCKER_HOST: unix:///var/run/docker.sock
+    volumes:
+      - runner-data:/data
+      - ./ci/runner-config.yaml:/config.yaml:ro
+      # ジョブコンテナの起動はホストの podman に委譲する(docker 互換ソケット)。
+      - /run/podman/podman.sock:/var/run/docker.sock
+networks:
+  default:
+    name: ftci
+volumes:
+  gitea-data:
+  runner-data:

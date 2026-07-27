@@ -1,0 +1,283 @@
+<div
+  class="panel"
+  (dragenter)="onDragEnter($event)"
+  (dragover)="onDragOver($event)"
+  (dragleave)="onDragLeave()"
+  (drop)="onDrop($event)"
+>
+  <!-- CSV の drag&drop 受付中の全面オーバーレイ(取込フローはボタンと同一) -->
+  @if (csvDragActive()) {
+    <div class="drop-overlay" aria-hidden="true">
+      <mat-icon class="ic">upload</mat-icon> {{ 'csvImport.dropHint' | transloco }}
+    </div>
+  }
+  <div class="toolbar">
+    @if (tableNames().length > 1) {
+      <select
+        class="table-select"
+        [value]="selectedTable()"
+        (change)="tableChanged.emit($any($event.target).value)"
+      >
+        @for (name of tableNames(); track name) {
+          <option [value]="name">{{ name }}</option>
+        }
+      </select>
+    } @else {
+      <span class="table-label" [title]="selectedTable()">{{ selectedTable() }}</span>
+    }
+    <span class="spacer"></span>
+    <!-- 動的に現れるボタンは固定ボタン群の左側(余白側)へ積む。
+         出現時に既存ボタンの位置がずれないようにするため。 -->
+    @if (filterColumns().length > 0) {
+      <!-- じょうご: フィルタ行を出して直接列選択を開く(適用数バッジ付き) -->
+      <button
+        mat-icon-button
+        class="filter-toggle"
+        type="button"
+        [class.active]="filterRowVisible()"
+        (click)="onFilterButton($event)"
+        [attr.aria-label]="'dataTable.filterToggle' | transloco"
+        [attr.title]="'dataTable.filterToggle' | transloco"
+      >
+        <mat-icon class="ic" aria-hidden="true">filter_alt</mat-icon>
+        @if (predicates().length > 0) {
+          <span class="filter-count">{{ predicates().length }}</span>
+        }
+      </button>
+    }
+    @if (canCreate()) {
+      @if (selectedPendingCount() > 0) {
+        <button
+          mat-flat-button
+          class="save-pending"
+          type="button"
+          [attr.title]="'dataTable.savePending' | transloco"
+          (click)="onSavePending()"
+        >
+          <mat-icon class="ic" aria-hidden="true">save</mat-icon>
+          <span class="lbl">{{ 'dataTable.savePending' | transloco }} ({{ selectedPendingCount() }})</span>
+        </button>
+      }
+      @if (selectedCount() > 0) {
+        <button
+          mat-flat-button
+          class="bulk-delete"
+          type="button"
+          [attr.title]="'dataTable.bulkDelete' | transloco"
+          (click)="onBulkDelete()"
+        >
+          <mat-icon class="ic" aria-hidden="true">delete</mat-icon>
+          <span class="lbl">{{ 'dataTable.bulkDelete' | transloco }} ({{ selectedCount() }})</span>
+        </button>
+      }
+    }
+    @if (showCsvExport()) {
+      <button
+        mat-stroked-button
+        class="csv-export"
+        type="button"
+        [attr.title]="'csvExport.title' | transloco"
+        (click)="onCsvExport()"
+      >
+        <mat-icon class="ic" aria-hidden="true">download</mat-icon>
+        <span class="lbl">{{ 'csvExport.title' | transloco }}</span>
+      </button>
+    }
+    @if (canCreate()) {
+      <button
+        mat-stroked-button
+        class="csv-export"
+        type="button"
+        [disabled]="insertBlockedColumns().length > 0"
+        [attr.title]="insertBlockedColumns().length > 0
+          ? ('dataTable.insertBlocked' | transloco: { cols: insertBlockedColumns().join(', ') })
+          : ('csvImport.title' | transloco)"
+        (click)="fileInput.click()"
+      >
+        <mat-icon class="ic" aria-hidden="true">upload</mat-icon>
+        <span class="lbl">{{ 'csvImport.title' | transloco }}</span>
+      </button>
+      <input
+        #fileInput
+        class="file-input"
+        type="file"
+        accept=".csv,text/csv"
+        (change)="onCsvFileSelected($any($event.target))"
+      />
+    }
+    @if (showMultiSelect()) {
+      <button
+        mat-stroked-button
+        class="multi-toggle"
+        type="button"
+        [class.active]="multiSelectMode()"
+        [attr.title]="'dataTable.multiSelect' | transloco"
+        (click)="toggleMultiSelect()"
+        [attr.aria-pressed]="multiSelectMode()"
+      >
+        <mat-icon class="ic" aria-hidden="true">check_box</mat-icon>
+        <span class="lbl">{{ 'dataTable.multiSelect' | transloco }}</span>
+      </button>
+    }
+    @if (canCreate()) {
+      <button
+        mat-flat-button
+        class="create"
+        type="button"
+        [disabled]="insertBlockedColumns().length > 0"
+        [attr.title]="insertBlockedColumns().length > 0
+          ? ('dataTable.insertBlocked' | transloco: { cols: insertBlockedColumns().join(', ') })
+          : ('dataTable.create' | transloco)"
+        (click)="createClicked.emit()"
+      >
+        <mat-icon class="ic" aria-hidden="true">add</mat-icon> <span class="lbl">{{ 'dataTable.create' | transloco }}</span>
+      </button>
+    }
+  </div>
+
+  <!-- チップフィルタ(述語の組み立ては tm-filter-bar,解釈はサーバー)。
+       既定は非表示: 条件がある間かポップオーバーを開いている間だけ出す -->
+  @if (filterRowVisible()) {
+    <div class="filter-bar-row">
+      <tm-filter-bar
+        [columns]="filterColumns()"
+        [predicates]="predicates()"
+        (predicatesChange)="predicatesChange.emit($event)"
+        (openChanged)="onFilterOpenChanged($event)"
+      />
+    </div>
+  }
+
+  <div class="table-wrap">
+    <table class="table" [tmResizeColumns]="storageKey()" [tmAutoFit]="true">
+      <thead>
+        <tr>
+          @if (multiSelectMode()) {
+            <th class="check-th" data-no-resize>
+              <input
+                type="checkbox"
+                [checked]="allChecked()"
+                (change)="toggleAll($any($event.target).checked)"
+                [attr.aria-label]="'dataTable.selectAll' | transloco"
+              />
+            </th>
+          }
+          @for (col of columns(); track col.key) {
+            <th [attr.data-col]="col.key">
+              <span class="th-label">{{ col.label }}</span>
+            </th>
+          }
+        </tr>
+      </thead>
+      <tbody [class.no-select]="multiSelectMode()">
+        @if (loading()) {
+          <tr>
+            <td class="state-cell" [attr.colspan]="colspan()">
+              {{ 'common.loading' | transloco }}
+            </td>
+          </tr>
+        } @else {
+          @for (row of allRows(); track $index; let i = $index, odd = $odd) {
+            <tr
+              [class.odd]="odd"
+              [class.checked]="selected().has(i)"
+              [class.pending]="isPending(i)"
+              (click)="onRowClick(i, row)"
+              (pointerdown)="onRowPointerDown(i, $event)"
+              (pointerenter)="onRowPointerEnter(i)"
+            >
+              @if (multiSelectMode()) {
+                <td class="check-td" (click)="$event.stopPropagation()">
+                  <input
+                    type="checkbox"
+                    [checked]="selected().has(i)"
+                    (change)="toggleRow(i, $any($event.target).checked)"
+                    [attr.aria-label]="'dataTable.selectRow' | transloco"
+                  />
+                </td>
+              }
+              @for (col of columns(); track col.key; let firstCol = $first) {
+                <td [class.mono]="col.mono">
+                  <!-- DB 未反映の取込行は先頭列(通常 ID/主キー)に * を付ける -->
+                  @if (firstCol && isPending(i)) {
+                    <span class="pending-mark" [attr.title]="'dataTable.pendingHint' | transloco">*</span>
+                  }@if (col.template) {
+                    <ng-container *ngTemplateOutlet="col.template; context: { $implicit: row, col: col }" />
+                  } @else {{{ row[col.key] }}}
+                </td>
+              }
+            </tr>
+            <!-- 行展開(履歴の detail 等)。テンプレートは利用側が宣言する -->
+            @if (i === expandedIndex()) {
+              @if (expandTemplate(); as tpl) {
+                <tr class="expand-row">
+                  <td [attr.colspan]="colspan()">
+                    <ng-container *ngTemplateOutlet="tpl; context: { $implicit: row }" />
+                  </td>
+                </tr>
+              }
+            }
+          } @empty {
+            <tr>
+              <td class="state-cell" [attr.colspan]="colspan()">
+                {{ 'dataTable.empty' | transloco }}
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <div class="footer">
+    @if (totalCount() === 0) {
+      <span>{{ 'common.rangeEmpty' | transloco }}</span>
+    } @else {
+      <span>{{ 'common.range' | transloco: rangeParams() }}</span>
+    }
+    <span class="footer-right">
+      <label class="page-size">
+        {{ 'dataTable.pageJump' | transloco }}
+        <select
+          class="page-jump-select"
+          (change)="pageChanged.emit(+$any($event.target).value)"
+          [attr.aria-label]="'dataTable.pageJump' | transloco"
+        >
+          @for (n of pageNumbers(); track n) {
+            <option [value]="n" [selected]="n === page()">{{ n }}</option>
+          }
+        </select>
+      </label>
+      <label class="page-size">
+        {{ 'dataTable.pageSize' | transloco }}
+        <select
+          class="page-size-select"
+          (change)="pageSizeChanged.emit(+$any($event.target).value)"
+        >
+          <!-- select の [value] は option 描画とタイミングが競合するため selected で指定 -->
+          @for (n of PAGE_SIZES; track n) {
+            <option [value]="n" [selected]="n === pageSize()">{{ n }}</option>
+          }
+        </select>
+      </label>
+    <span class="pager">
+      <button
+        class="pager-btn"
+        type="button"
+        [disabled]="page() <= 1"
+        (click)="pageChanged.emit(page() - 1)"
+        [attr.aria-label]="'common.prevPage' | transloco"
+      >‹</button>
+      {{ page() }} / {{ totalPages() }}
+      <button
+        class="pager-btn"
+        type="button"
+        [disabled]="page() >= totalPages()"
+        (click)="pageChanged.emit(page() + 1)"
+        [attr.aria-label]="'common.nextPage' | transloco"
+      >›</button>
+    </span>
+    </span>
+  </div>
+</div>
+

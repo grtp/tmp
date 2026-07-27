@@ -1,0 +1,234 @@
+<div class="panel">
+  @if (visibleTabs().length > 1) {
+    <nav mat-tab-nav-bar [tabPanel]="tabPanel" [mat-stretch-tabs]="false" class="tabs">
+      @for (t of visibleTabs(); track t) {
+        <a
+          mat-tab-link
+          tabindex="0"
+          [active]="activeTab() === t"
+          (click)="tabChanged.emit(t)"
+          (keyup.enter)="tabChanged.emit(t)"
+        >
+          <mat-icon class="ic tab-ic" aria-hidden="true">{{ tabIcon(t) }}</mat-icon>
+          {{ tabLabelKey(t) | transloco }}
+        </a>
+      }
+    </nav>
+  }
+
+  <mat-tab-nav-panel #tabPanel>
+  @if (loading()) {
+    <p class="state">{{ 'common.loading' | transloco }}</p>
+  } @else {
+    @switch (activeTab()) {
+      @case ('tables') {
+        <div class="toolbar">
+          <button
+            mat-flat-button
+            class="btn primary"
+            type="button"
+            [attr.title]="'settings.registerTable' | transloco"
+            (click)="registerClicked.emit()"
+          >
+            <mat-icon class="ic" aria-hidden="true">add</mat-icon>
+            <span class="lbl">{{ 'settings.registerTable' | transloco }}</span>
+          </button>
+        </div>
+        <table class="table" tmResizeColumns="ftool.colw:settings:tables">
+          <thead>
+            <tr>
+              <th>{{ 'settings.thDisplayName' | transloco }}</th>
+              <th>{{ 'settings.thConnection' | transloco }}</th>
+              <th>{{ 'settings.thPhysicalTable' | transloco }}</th>
+              <th>{{ 'settings.thDescription' | transloco }}</th>
+              <th class="w80">{{ 'settings.thVisible' | transloco }}</th>
+              <th class="w80">{{ 'settings.thOps' | transloco }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (t of managedTables(); track t.id) {
+              <!-- 行クリックで編集(表示名/説明/列モード)。チェック・削除は伝播させない -->
+              <tr class="row-clickable" (click)="tableEditClicked.emit(t.id)">
+                <td>{{ t.displayName }}</td>
+                <td>
+                  @if (t.connectionName) {
+                    <span class="conn-badge" [title]="t.connectionName">{{ t.connectionName }}</span>
+                  } @else {
+                    <span class="muted">{{ 'common.defaultDb' | transloco }}</span>
+                  }
+                </td>
+                <td class="mono">{{ t.schemaName }}.{{ t.tableName }}</td>
+                <td class="muted">{{ t.description }}</td>
+                <td (click)="$event.stopPropagation()">
+                  <mat-checkbox [checked]="t.enabled"
+                    (change)="tableToggled.emit({ id: t.id, enabled: $event.checked })" />
+                </td>
+                <td (click)="$event.stopPropagation()">
+                  <button mat-icon-button class="icon-btn danger" type="button" (click)="tableDeleteClicked.emit(t.id)"
+                    [attr.aria-label]="'settings.unregisterAria' | transloco">
+                    <mat-icon class="ic" aria-hidden="true">delete</mat-icon>
+                  </button>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td class="state" colspan="6">{{ 'settings.tablesEmpty' | transloco }}</td></tr>
+            }
+          </tbody>
+        </table>
+      }
+
+      @case ('connections') {
+        <div class="toolbar">
+          <button
+            mat-flat-button
+            class="btn primary"
+            type="button"
+            [attr.title]="'settings.addConnection' | transloco"
+            (click)="connectionAddClicked.emit()"
+          >
+            <mat-icon class="ic" aria-hidden="true">add</mat-icon>
+            <span class="lbl">{{ 'settings.addConnection' | transloco }}</span>
+          </button>
+        </div>
+        <table class="table" tmResizeColumns="ftool.colw:settings:connections">
+          <thead>
+            <tr>
+              <th>{{ 'settings.thName' | transloco }}</th>
+              <th>{{ 'settings.thHost' | transloco }}</th>
+              <th>{{ 'settings.thDatabase' | transloco }}</th>
+              <th>{{ 'settings.thUsername' | transloco }}</th>
+              <th>{{ 'settings.thSchema' | transloco }}</th>
+              <th class="w80">{{ 'settings.thEnabled' | transloco }}</th>
+              <th class="w200">{{ 'settings.thOps' | transloco }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (cn of connections(); track cn.id) {
+              <tr>
+                <td>{{ cn.name }}</td>
+                <td class="mono">{{ cn.host }}:{{ cn.port }}</td>
+                <td class="mono">{{ cn.databaseName }}</td>
+                <td class="mono">{{ cn.username }}</td>
+                <td class="mono">{{ cn.schemaName || ('settings.schemaUnrestricted' | transloco) }}</td>
+                <td>
+                  <mat-checkbox [checked]="cn.enabled"
+                    (change)="connectionToggled.emit({ id: cn.id, enabled: $event.checked })" />
+                </td>
+                <td>
+                  <span class="ops">
+                    <button mat-icon-button class="icon-btn" type="button" (click)="connectionTestClicked.emit(cn.id)"
+                      [attr.title]="'settings.testConnection' | transloco"
+                      [attr.aria-label]="'settings.testConnection' | transloco">
+                      <mat-icon class="ic" aria-hidden="true">bolt</mat-icon>
+                    </button>
+                    <button mat-icon-button class="icon-btn" type="button" (click)="connectionEditClicked.emit(cn.id)"
+                      [attr.title]="'settings.editAria' | transloco"
+                      [attr.aria-label]="'settings.editAria' | transloco">
+                      <mat-icon class="ic" aria-hidden="true">edit</mat-icon>
+                    </button>
+                    <button mat-icon-button class="icon-btn danger" type="button" (click)="connectionDeleteClicked.emit(cn.id)"
+                      [attr.title]="'settings.deleteAria' | transloco"
+                      [attr.aria-label]="'settings.deleteAria' | transloco">
+                      <mat-icon class="ic" aria-hidden="true">delete</mat-icon>
+                    </button>
+                  </span>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td class="state" colspan="7">{{ 'settings.connectionsEmpty' | transloco }}</td></tr>
+            }
+          </tbody>
+        </table>
+      }
+
+      @case ('templates') {
+        <div class="toolbar">
+          <button
+            mat-flat-button
+            class="btn primary"
+            type="button"
+            [attr.title]="'settings.addTemplate' | transloco"
+            (click)="templateAddClicked.emit()"
+          >
+            <mat-icon class="ic" aria-hidden="true">dashboard</mat-icon>
+            <span class="lbl">{{ 'settings.addTemplate' | transloco }}</span>
+          </button>
+        </div>
+        <table class="table" tmResizeColumns="ftool.colw:settings:templates">
+          <thead>
+            <tr>
+              <th>{{ 'settings.thTemplateName' | transloco }}</th>
+              <th>{{ 'settings.thDescription' | transloco }}</th>
+              <th class="w80">{{ 'settings.thEnabled' | transloco }}</th>
+              <th class="w80">{{ 'settings.thOps' | transloco }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (t of dashTemplates(); track t.id) {
+              <tr>
+                <td>{{ t.name }}</td>
+                <td class="muted">{{ t.description }}</td>
+                <td>
+                  <mat-checkbox [checked]="t.enabled"
+                    (change)="templateToggled.emit({ id: t.id, enabled: $event.checked })" />
+                </td>
+                <td>
+                  <span class="ops">
+                    <button mat-icon-button class="icon-btn" type="button" (click)="templateEditClicked.emit(t.id)"
+                      [attr.aria-label]="'settings.editAria' | transloco">
+                      <mat-icon class="ic" aria-hidden="true">edit</mat-icon>
+                    </button>
+                    <button mat-icon-button class="icon-btn danger" type="button" (click)="templateDeleteClicked.emit(t.id)"
+                      [attr.aria-label]="'settings.deleteAria' | transloco">
+                      <mat-icon class="ic" aria-hidden="true">delete</mat-icon>
+                    </button>
+                  </span>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td class="state" colspan="4">{{ 'settings.templatesEmpty' | transloco }}</td></tr>
+            }
+          </tbody>
+        </table>
+      }
+
+      @case ('actions') {
+        <!-- 組込機能の表示編集のみ。機能の追加はコード実装 + シードで行い，
+             任意 URL のカードは各ユーザーがダッシュボードの個人リンクで持つ。 -->
+        <table class="table" tmResizeColumns="ftool.colw:settings:actions">
+          <thead>
+            <tr>
+              <th class="w140">{{ 'settings.thCode' | transloco }}</th>
+              <th>{{ 'settings.thName' | transloco }}</th>
+              <th class="w80">{{ 'settings.thIcon' | transloco }}</th>
+              <th class="w80">{{ 'settings.thEnabled' | transloco }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (a of actions(); track a.id) {
+              <tr>
+                <td class="mono">{{ a.code }}</td>
+                <td>{{ a.name }}</td>
+                <td><mat-icon class="ic" aria-hidden="true">{{ a.icon }}</mat-icon> <span class="muted">{{ a.icon }}</span></td>
+                <td>
+                  <!-- settings 自身は無効化できない(ロックアウト防止)。
+                       他の行と見た目を揃えつつ disabled のチェックで固定表示する。 -->
+                  @if (a.code === 'settings') {
+                    <span [attr.title]="'settings.settingsLocked' | transloco">
+                      <mat-checkbox [checked]="a.enabled" [disabled]="true" />
+                    </span>
+                  } @else {
+                    <mat-checkbox [checked]="a.enabled"
+                      (change)="actionToggled.emit({ id: a.id, enabled: $event.checked })" />
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    }
+  }
+  </mat-tab-nav-panel>
+</div>
+
