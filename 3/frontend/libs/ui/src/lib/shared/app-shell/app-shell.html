@@ -1,0 +1,78 @@
+<div class="page">
+  <mat-toolbar class="header" color="primary">
+    <!-- ブランド表示はサイドバー開閉のトグルも兼ねる(折りたたみボタンは
+         サイドバー最下部にあるため，上部からも開閉できるようにする)。 -->
+    <button
+      class="header-title"
+      type="button"
+      (click)="toggleSidebar()"
+      [attr.title]="(sidebarCollapsed() ? 'common.sidebarExpand' : 'common.sidebarCollapse') | transloco"
+      [attr.aria-label]="(sidebarCollapsed() ? 'common.sidebarExpand' : 'common.sidebarCollapse') | transloco"
+      [attr.aria-expanded]="!sidebarCollapsed()"
+    >
+      <!-- サイドバーが閉じている間だけロゴアイコン(F)，開いている間はテキストのみ -->
+      @if (sidebarCollapsed()) {
+        <svg class="brand-logo" viewBox="0 0 32 32" aria-hidden="true">
+          <path d="M6 4H26V10H13V14H22V20H13V28H6Z" fill="currentColor"/>
+        </svg>
+      } @else {
+        {{ systemName() }}
+      }
+    </button>
+    <span class="header-right">
+      <!-- 現在時刻(端末のローカル時刻。分単位で更新)。狭い画面では
+           日付を落として時刻だけ残す(CSS の .clock-date) -->
+      <span class="clock">
+        <span class="clock-date">{{ clock().date }}</span>
+        <span class="clock-time">{{ clock().time }}</span>
+      </span>
+      <tm-lang-select variant="on-primary" />
+      <tm-user-menu
+        [userName]="userName()"
+        (topClicked)="menuSelected.emit('home')"
+        (personalSettingsClicked)="menuSelected.emit('personal-settings')"
+        (logoutClicked)="menuSelected.emit('logout')"
+      />
+    </span>
+  </mat-toolbar>
+
+  <div class="body">
+    <nav class="sidebar" aria-label="メインメニュー" [class.collapsed]="sidebarCollapsed()">
+      <mat-nav-list class="menu-list">
+        @for (item of menuItems(); track item.id) {
+          <button
+            mat-list-item
+            class="menu-item"
+            type="button"
+            [class.active]="item.id === activeMenuId()"
+            [attr.title]="sidebarCollapsed() ? item.label : null"
+            (click)="menuSelected.emit(item.id)"
+          >
+            <mat-icon matListItemIcon aria-hidden="true">{{ item.icon }}</mat-icon>
+            @if (!sidebarCollapsed()) {
+              <span matListItemTitle>{{ item.label }}</span>
+            }
+          </button>
+        }
+      </mat-nav-list>
+      <!-- 折りたたみ切替: サイドバー最下部(フッター)に固定する。 -->
+      <button
+        class="sidebar-toggle"
+        type="button"
+        (click)="toggleSidebar()"
+        [attr.title]="(sidebarCollapsed() ? 'common.sidebarExpand' : 'common.sidebarCollapse') | transloco"
+        [attr.aria-label]="(sidebarCollapsed() ? 'common.sidebarExpand' : 'common.sidebarCollapse') | transloco"
+        [attr.aria-expanded]="!sidebarCollapsed()"
+      >
+        <mat-icon class="ic" aria-hidden="true">{{ sidebarCollapsed() ? 'chevron_right' : 'chevron_left' }}</mat-icon>
+        @if (!sidebarCollapsed()) {
+          <span>{{ 'common.sidebarCollapse' | transloco }}</span>
+        }
+      </button>
+    </nav>
+
+    <main class="main">
+      <ng-content />
+    </main>
+  </div>
+</div>

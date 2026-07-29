@@ -1,0 +1,60 @@
+# deploy/nginx/host-frontend.conf.example
+# 既に nginx が動いているサーバーへ F-tool を追加する場合のひな形。
+# ホスト側 nginx の conf.d(例 /etc/nginx/conf.d/ftool.conf)へ置く。
+#
+#   cp deploy/nginx/host-frontend.conf.example /etc/nginx/conf.d/ftool.conf
+#   vi /etc/nginx/conf.d/ftool.conf      # server_name と転送先ポートを直す
+#   nginx -t && systemctl reload nginx
+#
+# 役割分担(2段のリバースプロキシ):
+#   ホスト nginx  … 受け口。ここでは転送するだけ
+#   コンテナ nginx … SPA の配信・フォールバック・キャッシュ・/api の中継
+# SPA の配信規則をコンテナ側に閉じ込めることで，環境ごとに書き写すのは
+# この1ファイルだけで済む(F-tool 側を入れ替えてもホスト nginx は無変更)。
+#
+# 【サブパスにしないこと】
+# SPA は <base href="/">，セッション Cookie も Path=/ のため，
+# https://portal.example.local/ftool/ のような間借りにすると base href を
+# 変えた再ビルドが必要になり，Cookie も同居アプリと衝突する。
+# 専用のホスト名(バーチャルホスト)を割り当てること。
+
+server {
+    listen 80;
+    # F-tool 専用のホスト名。DNS もこのサーバーへ向けておく
+    server_name ftool.example.local;
+
+    # HTTPS で終端する場合はこの server を 443 + ssl にし，
+    # backend の .env で COOKIE_SECURE=true にすること
+    # (忘れると Cookie に Secure 属性が付かない)。
+    # listen 443 ssl;
+    # ssl_certificate     /etc/pki/tls/certs/ftool.crt;
+    # ssl_certificate_key /etc/pki/tls/private/ftool.key;
+
+    # CSV 一括取込は行データを JSON で送るため既定の 1MB では足りない。
+    # 【重要】外側(このファイル)の上限が先に効くので，コンテナ側だけ
+    # 広げても 413 になる。両方に同じ値を書くこと。
+    client_max_body_size 32m;
+
+    location / {
+        # compose の frontend コンテナ(deploy/compose.yaml の FRONTEND_PORT)。
+        # 同一ホストなのでループバック宛にする。
+        proxy_pass http://127.0.0.1:8081;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        # 操作履歴の client_ip はこのヘッダから解決される。
+        # ここは外部と接する信頼境界なので，クライアントが自称した
+        # X-Forwarded-For は引き継がず $remote_addr で上書きする
+        # ($proxy_add_x_forwarded_for だと詐称値がそのまま残り，
+        #  監査ログの IP を偽装できてしまう)。
+        # このサーバー自身がさらに別の LB の背後にある場合だけ，
+        # $proxy_add_x_forwarded_for に変えて前段を信頼する。
+        proxy_set_header X-Forwarded-For   $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # CSV 出力のストリーミング用(コンテナ側と同じ値)。
+        proxy_read_timeout 300s;
+        proxy_buffering    off;
+    }
+}
