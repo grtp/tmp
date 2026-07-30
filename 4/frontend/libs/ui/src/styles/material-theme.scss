@@ -1,0 +1,47 @@
+/* Angular Material(M3)テーマ。tokens.css と同様に app と Storybook の
+   両方から styles として注入する(コンポーネント側は CSS のままで良い)。 */
+@use '@angular/material' as mat;
+
+html {
+  color-scheme: light;
+
+  @include mat.theme(
+    (
+      color: mat.$azure-palette,
+      typography: (
+        plain-family: (
+          'Hiragino Kaku Gothic ProN',
+          'Noto Sans JP',
+          'Yu Gothic UI',
+          'Meiryo',
+          sans-serif,
+        ),
+        brand-family: (
+          'Hiragino Kaku Gothic ProN',
+          'Noto Sans JP',
+          'Yu Gothic UI',
+          'Meiryo',
+          sans-serif,
+        ),
+      ),
+      density: 0,
+    )
+  );
+
+  /* ブランド整合: 主要システムトークンを既存デザイントークン(--tm-*)へ寄せる。
+     Material 部品が増えて齟齬が出たらここで調整する(部品側では上書きしない)。 */
+  --mat-sys-primary: var(--tm-primary);
+  --mat-sys-on-primary: var(--tm-text-on-primary);
+  --mat-sys-error: var(--tm-danger);
+  --mat-sys-surface: var(--tm-surface);
+  --mat-sys-on-surface: var(--tm-text);
+  --mat-sys-outline: var(--tm-border-strong);
+  --mat-sys-outline-variant: var(--tm-border);
+
+  /* ダイアログの角丸: M3 既定(--mat-sys-corner-extra-large = 28px)は
+     アプリの他部品(カード/ボタン等が使う --tm-radius)より大幅に丸く
+     バランスを欠くため,ダイアログ専用トークンだけをアプリの角丸に
+     揃える(システムトークン自体は変えないため,メニュー等 M3 の
+     他コンポーネントには影響しない)。 */
+  --mat-dialog-container-shape: var(--tm-radius);
+}

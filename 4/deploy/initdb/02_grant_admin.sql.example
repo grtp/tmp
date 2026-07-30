@@ -1,0 +1,36 @@
+-- deploy/initdb/02_grant_admin.sql.example
+-- 初回 admin ブートストラップ手順。
+--
+-- 権限を付与できるのは settings:admin のユーザーだけなので,最初の管理者は
+-- SQL で直接付与する必要がある(鶏と卵の解消)。
+--
+-- 手順:
+--   1. 対象ユーザーで一度ログインする(ftool_app_users に自動登録される)
+--   2. 下の @username を書き換えて sqlcmd で実行する:
+--        podman exec -i ft-mssql /opt/mssql-tools18/bin/sqlcmd -C -S localhost \
+--          -U sa -P 'Fidev01!' -d ftool -i /initdb/02_grant_admin.sql
+--
+-- 注意(開発環境): OpenLDAP の entryUUID はボリューム再作成で変わる。
+-- `podman compose down -v` 後は再ログイン→再付与が必要。
+-- LDAP_MOCK=true の場合は固定 GUID が 01_init.sql でシード済みのため不要。
+
+USE ftool;
+GO
+
+DECLARE @username NVARCHAR(256) = N'local';   -- ← 付与したいユーザーの username に変更
+
+MERGE dbo.ftool_app_user_auth AS t
+USING (
+    SELECT u.object_guid, a.id AS action_id
+    FROM dbo.ftool_app_users u
+    CROSS JOIN dbo.ftool_app_actions a
+    WHERE u.username = @username
+      AND a.code IN (N'table-maint', N'settings', N'history')
+) AS s
+ON t.object_guid = s.object_guid AND t.action_id = s.action_id
+WHEN MATCHED THEN
+    UPDATE SET auth_level = N'admin', updated_by = N'setup:grant_admin', updated_at = SYSUTCDATETIME()
+WHEN NOT MATCHED THEN
+    INSERT (object_guid, action_id, auth_level, created_by, updated_by)
+    VALUES (s.object_guid, s.action_id, N'admin', N'setup:grant_admin', N'setup:grant_admin');
+GO

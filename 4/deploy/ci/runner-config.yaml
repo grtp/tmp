@@ -1,0 +1,10 @@
+# act_runner 設定。ジョブコンテナを ftci ネットワークへ接続し,
+# サービス名 gitea で clone 先へ到達できるようにする。
+log:
+  level: info
+runner:
+  labels:
+    - "ftool-ci:docker://localhost/ftool-ci:latest"
+container:
+  network: ftci
+  privileged: false

@@ -1,0 +1,77 @@
+<div class="dashboard-main">
+  <p class="greeting">{{ greeting() }}</p>
+
+  <div
+    class="cards"
+    [class.editing]="editMode()"
+    (dragover)="onContainerDragOver($event)"
+    (drop)="onDrop($event)"
+  >
+    @for (card of displayCards(); track card.key) {
+      <mat-card
+        appearance="outlined"
+        class="card"
+        [class.dragging]="dragKey() === card.key"
+        [attr.draggable]="editMode()"
+        [attr.data-key]="card.key"
+        (dragstart)="onDragStart($event, card.key)"
+        (dragover)="onDragOver($event, card.key)"
+        (drop)="onDrop($event)"
+        (dragend)="onDragEnd()"
+      >
+        <button class="card-body" type="button" (click)="onCardClick(card)">
+          <mat-icon class="card-icon ic" aria-hidden="true">{{ card.icon }}</mat-icon>
+          <span class="card-name">
+            {{ card.name }}
+            @if (card.url) {
+              <mat-icon class="ext ic" aria-hidden="true">open_in_new</mat-icon>
+            }
+          </span>
+          <!-- 詳細行: カード種別によらず高さを揃えるため常に描画する -->
+          <span class="card-detail">{{ card.detail }}</span>
+          <span class="card-perm">
+            @if (card.kind === 'function' || card.kind === 'table') {
+              {{ permissionKey(card.permission ?? 'view') | transloco }}
+            }
+          </span>
+        </button>
+        <!-- リンクカードの詳細編集(鉛筆)は通常時のみ,削除(×)は画面編集モード中のみ
+             (全カード種別が対象。実体化コピー方式のためカードは全てユーザー自身の
+             データ)。× は親カードが draggable の間に出るため,ドラッグに巻き込まれ
+             ないよう draggable=false を明示する -->
+        <span class="link-ops">
+          @if (!editMode() && card.kind === 'link') {
+            <button class="mini" type="button" (click)="linkEditClicked.emit(card)"
+              [attr.aria-label]="'settings.editAria' | transloco">
+              <mat-icon class="ic" aria-hidden="true">edit</mat-icon>
+            </button>
+          }
+          @if (editMode()) {
+            <button class="mini danger" type="button" draggable="false" (click)="linkDeleteClicked.emit(card)"
+              [attr.aria-label]="'settings.deleteAria' | transloco">
+              <mat-icon class="ic" aria-hidden="true">close</mat-icon>
+            </button>
+          }
+        </span>
+      </mat-card>
+    } @empty {
+      <p class="empty">{{ emptyKey() | transloco }}</p>
+    }
+  </div>
+
+  <!-- FAB: 通常は機能選択,画面編集中は[戻る]に切り替わる
+       (並び替え・削除は操作ごとに保存済みのため確定ボタンは無い) -->
+  @if (editMode()) {
+    <div class="edit-actions">
+      <button mat-flat-button color="primary" class="edit-btn back" type="button" (click)="onEditBack()">
+        <mat-icon class="ic" aria-hidden="true">arrow_back</mat-icon>
+        {{ 'reorderMode.back' | transloco }}
+      </button>
+    </div>
+  } @else {
+    <button mat-fab color="primary" class="fab" type="button" (click)="fabClicked.emit()"
+      [attr.aria-label]="'dashboard.fabAria' | transloco">
+      <mat-icon aria-hidden="true">add</mat-icon>
+    </button>
+  }
+</div>

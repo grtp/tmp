@@ -1,0 +1,14 @@
+# ビルドコンテキスト(リポジトリルート)から除外するもの。
+# frontend/node_modules は数百 MB あり, 転送するとビルドが目に見えて遅くなる。
+# イメージ内では npm ci で入れ直すため不要。
+frontend/node_modules/
+frontend/dist/
+frontend/.nx/
+frontend/.angular/
+e2e/node_modules/
+
+# 秘密情報。イメージへ紛れ込ませない(backend は env_file で受け取る)。
+deploy/.env
+backend/.env
+
+.git/
