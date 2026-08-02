@@ -1,0 +1,82 @@
+{
+  "name": "f-tool",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "prefix": "tm",
+  "sourceRoot": "apps/f-tool/src",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@angular/build:application",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "defaultConfiguration": "production",
+      "options": {
+        "outputPath": "dist/apps/f-tool",
+        "browser": "apps/f-tool/src/main.ts",
+        "tsConfig": "apps/f-tool/tsconfig.app.json",
+        "assets": [
+          {
+            "glob": "**/*",
+            "input": "apps/f-tool/public"
+          }
+        ],
+        "styles": [
+          "libs/ui/src/styles/material-theme.scss",
+          "apps/f-tool/src/styles.css"
+        ]
+      },
+      "configurations": {
+        "production": {
+          "budgets": [
+            {
+              "type": "initial",
+              "maximumWarning": "1mb",
+              "maximumError": "2mb"
+            },
+            {
+              "type": "anyComponentStyle",
+              "maximumWarning": "10kb",
+              "maximumError": "20kb"
+            }
+          ],
+          "outputHashing": "all"
+        },
+        "development": {
+          "optimization": false,
+          "extractLicenses": false,
+          "sourceMap": true
+        }
+      }
+    },
+    "serve": {
+      "continuous": true,
+      "executor": "@angular/build:dev-server",
+      "defaultConfiguration": "development",
+      "options": {
+        "proxyConfig": "apps/f-tool/proxy.conf.json"
+      },
+      "configurations": {
+        "production": {
+          "buildTarget": "f-tool:build:production"
+        },
+        "development": {
+          "buildTarget": "f-tool:build:development"
+        }
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
+    "serve-static": {
+      "continuous": true,
+      "executor": "@nx/web:file-server",
+      "options": {
+        "buildTarget": "f-tool:build",
+        "staticFilePath": "dist/apps/f-tool/browser",
+        "spa": true
+      }
+    }
+  }
+}

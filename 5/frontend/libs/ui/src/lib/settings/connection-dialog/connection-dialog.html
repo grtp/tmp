@@ -1,0 +1,86 @@
+<!-- 画面外クリックでは閉じない(誤操作防止。dialog.ts の disableClose)。Esc かボタンで閉じる。 -->
+<h2 mat-dialog-title class="head">
+  <span class="head-title">
+    <mat-icon class="ic" aria-hidden="true">cable</mat-icon>
+    {{ (mode === 'create' ? 'connectionDialog.createTitle' : 'connectionDialog.editTitle') | transloco }}
+  </span>
+  <button class="close" type="button" (click)="cancel()" [attr.aria-label]="'common.close' | transloco">
+    <mat-icon class="ic" aria-hidden="true">close</mat-icon>
+  </button>
+</h2>
+
+<mat-dialog-content class="body">
+  @if (errorMessage(); as msg) {
+    <p class="error">{{ msg }}</p>
+  }
+  @if (testResult(); as result) {
+    <p class="test" [class.ng]="!result.startsWith('OK')">{{ result }}</p>
+  }
+
+        <label class="field">
+          <span class="label">{{ 'connectionDialog.name' | transloco }} <span class="req">{{ 'common.required' | transloco }}</span></span>
+          <input class="input" type="text" maxlength="128" [value]="name()"
+            (input)="name.set($any($event.target).value)" />
+        </label>
+        <div class="row">
+          <label class="field grow">
+            <span class="label">{{ 'connectionDialog.host' | transloco }} <span class="req">{{ 'common.required' | transloco }}</span></span>
+            <input class="input" type="text" maxlength="255" [value]="host()"
+              (input)="host.set($any($event.target).value)" />
+          </label>
+          <label class="field w100">
+            <span class="label">{{ 'connectionDialog.port' | transloco }}</span>
+            <input class="input" type="number" [value]="port()"
+              (input)="port.set(+$any($event.target).value)" />
+          </label>
+        </div>
+        <label class="field">
+          <span class="label">{{ 'connectionDialog.database' | transloco }} <span class="req">{{ 'common.required' | transloco }}</span></span>
+          <input class="input" type="text" maxlength="128" [value]="databaseName()"
+            (input)="databaseName.set($any($event.target).value)" />
+        </label>
+        <div class="row">
+          <label class="field grow">
+            <span class="label">{{ 'connectionDialog.username' | transloco }} <span class="req">{{ 'common.required' | transloco }}</span></span>
+            <input class="input" type="text" maxlength="128" autocomplete="off" [value]="username()"
+              (input)="username.set($any($event.target).value)" />
+          </label>
+          <label class="field grow">
+            <span class="label">
+              {{ 'connectionDialog.password' | transloco }}
+              @if (mode === 'create') {
+                <span class="req">{{ 'common.required' | transloco }}</span>
+              } @else {
+                <span class="hint">{{ 'connectionDialog.passwordKeep' | transloco }}</span>
+              }
+            </span>
+            <input class="input" type="password" autocomplete="new-password" [value]="password()"
+              (input)="password.set($any($event.target).value)" />
+          </label>
+        </div>
+        <label class="field">
+          <span class="label">{{ 'connectionDialog.options' | transloco }}</span>
+          <input class="input mono" type="text" maxlength="256" [value]="options()"
+            (input)="options.set($any($event.target).value)" />
+        </label>
+        <label class="field">
+          <span class="label">{{ 'connectionDialog.schema' | transloco }}</span>
+          <input class="input mono" type="text" maxlength="128" [value]="schemaName()"
+            (input)="schemaName.set($any($event.target).value)" />
+          <span class="hint">{{ 'connectionDialog.schemaHint' | transloco }}</span>
+        </label>
+</mat-dialog-content>
+
+<mat-dialog-actions class="foot">
+  <button class="btn" type="button" [disabled]="testing() || saving() || !canTest()" (click)="test()">
+    {{ (testing() ? 'connectionDialog.testing' : 'connectionDialog.test') | transloco }}
+  </button>
+  <span class="spacer"></span>
+  <button class="btn" type="button" [disabled]="saving()" (click)="cancel()">
+    {{ 'common.cancel' | transloco }}
+  </button>
+  <button class="btn primary" type="button" [disabled]="saving() || !canSave()" (click)="save()">
+    {{ (saving() ? 'common.saving' : 'common.save') | transloco }}
+  </button>
+</mat-dialog-actions>
+

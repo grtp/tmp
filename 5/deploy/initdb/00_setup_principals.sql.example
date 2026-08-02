@@ -1,0 +1,151 @@
+-- deploy/initdb/00_setup_principals.sql.example
+-- 本番 SQL Server の初期構築: スキーマ / ログイン / ユーザー / 権限。
+--
+-- 「DB は用意されたが, スキーマより下は自分で作る」場合に prod-app-schema.sql
+-- より先に実行する。DB そのものの作成(CREATE DATABASE)は含まない。
+--
+-- 実行者: 対象 DB に対して CREATE SCHEMA / CREATE USER / GRANT を行える権限
+--        (db_owner 相当)と, サーバーレベルの CREATE LOGIN 権限
+--        (securityadmin 相当)。通常は DBA が実行する。
+--
+-- 実行方法:
+--   sqlcmd -S <ホスト> -d <DB名> -U <管理アカウント> -P <パスワード> \
+--       -v DB_NAME=<DB名> \
+--          APP_SCHEMA=<作成するスキーマ名> \
+--          APP_LOGIN=<作成するログイン名> \
+--          APP_PASSWORD=<強いパスワード> \
+--          BIZ_SCHEMA=<業務テーブルのスキーマ名> \
+--       -i 00_setup_principals.sql
+--
+--   変数はすべて -v での指定を必須とする(:setvar を書かないのは,
+--   既定値による誤実行 — 例えば dbo 決め打ち — に気付けなくするため。
+--   指定を忘れると sqlcmd が「変数が定義されていません」で止まる)。
+--
+--   BIZ_SCHEMA は「テーブルメンテナンスで扱う業務テーブルが置かれた
+--   スキーマ」。既定接続で業務テーブルを扱わない(別接続としてUIから
+--   登録する)構成なら, APP_SCHEMA と同じ値を指定してよい。
+--
+-- 実行後:
+--   1. prod-app-schema.sql を -v APP_SCHEMA=<同じ値> で実行してテーブルを作る
+--      (このスクリプトで作ったログインでも実行できる。下記「DDL 権限」参照)
+--   2. .env の APP_DB_SCHEMA に同じスキーマ名を設定する
+--   3. .env の MSSQL_DSN をこのログインに向ける:
+--      sqlserver://<APP_LOGIN>:<APP_PASSWORD>@<host>:1433?database=<DB名>
+--
+-- 冪等性: 再実行しても安全(既存なら作成をスキップし, 権限は再付与する)。
+
+SET NOCOUNT ON;
+GO
+
+-- ---------------------------------------------------------------- スキーマ
+-- アプリ自身のテーブル(ftool_app_*)を置くスキーマ。業務テーブルとは分ける。
+IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name = N'$(APP_SCHEMA)')
+BEGIN
+    DECLARE @sql NVARCHAR(MAX) = N'CREATE SCHEMA ' + QUOTENAME(N'$(APP_SCHEMA)');
+    EXEC sp_executesql @sql;
+    PRINT 'created schema: $(APP_SCHEMA)';
+END
+ELSE
+    PRINT 'schema already exists: $(APP_SCHEMA)';
+GO
+
+-- ------------------------------------------------------------ ログイン(サーバー)
+-- SQL Server 認証。アプリ専用で, 人間は使わない。
+-- パスワードポリシーは既定に従う(CHECK_POLICY=ON)。
+IF NOT EXISTS (SELECT 1 FROM sys.server_principals WHERE name = N'$(APP_LOGIN)')
+BEGIN
+    CREATE LOGIN [$(APP_LOGIN)]
+        WITH PASSWORD = N'$(APP_PASSWORD)',
+             DEFAULT_DATABASE = [$(DB_NAME)],
+             CHECK_EXPIRATION = OFF,   -- サービスアカウントなので失効させない
+             CHECK_POLICY = ON;        -- 強度チェックは有効のまま
+    PRINT 'created login: $(APP_LOGIN)';
+END
+ELSE
+    PRINT 'login already exists: $(APP_LOGIN)';
+GO
+
+-- -------------------------------------------------------- ユーザー(データベース)
+IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'$(APP_LOGIN)')
+BEGIN
+    CREATE USER [$(APP_LOGIN)] FOR LOGIN [$(APP_LOGIN)]
+        WITH DEFAULT_SCHEMA = [$(APP_SCHEMA)];
+    PRINT 'created user: $(APP_LOGIN)';
+END
+ELSE
+    PRINT 'user already exists: $(APP_LOGIN)';
+GO
+
+-- -------------------------------------------------------------------- 権限
+-- 方針: db_datareader / db_datawriter のような DB 全体のロールは使わない
+-- (対象外のテーブルまで読み書きできてしまうため)。スキーマ単位で絞る。
+
+-- (1) アプリ自身のスキーマ: DML + DDL
+--     DDL が要るのは prod-app-schema.sql の適用(初期構築とバージョンアップの
+--     追補 ALTER)を同じアカウントで行うため。DBA が毎回 DDL を代行する運用に
+--     できるなら, ALTER / REFERENCES と下の CREATE TABLE を外して DML だけに
+--     してよい(その場合 prod-app-schema.sql は DBA が実行する)。
+GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA::[$(APP_SCHEMA)] TO [$(APP_LOGIN)];
+-- ALTER: このスキーマ内にテーブルを作成・変更するために必要。
+-- REFERENCES: ftool_app_* は外部キーを持つため必要。
+GRANT ALTER, REFERENCES ON SCHEMA::[$(APP_SCHEMA)] TO [$(APP_LOGIN)];
+GO
+-- CREATE TABLE はスキーマ単位ではなく**データベース単位**の権限。
+-- 上の ALTER ON SCHEMA と両方揃って初めてテーブルを作成できる。
+GRANT CREATE TABLE TO [$(APP_LOGIN)];
+GO
+
+-- (2) 業務テーブルのスキーマ: DML のみ(DDL は与えない)
+--     テーブルメンテナンスで行を読み書きする対象。構造は変更させない。
+--     APP_SCHEMA と同じ値を渡した場合は (1) と重複するだけで害はない。
+--     まだ業務スキーマが無い場合はスキップする(後から下の GRANT だけを
+--     単独で実行すればよい)。
+IF EXISTS (SELECT 1 FROM sys.schemas WHERE name = N'$(BIZ_SCHEMA)')
+BEGIN
+    DECLARE @grant NVARCHAR(MAX) =
+        N'GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA::'
+        + QUOTENAME(N'$(BIZ_SCHEMA)') + N' TO ' + QUOTENAME(N'$(APP_LOGIN)');
+    EXEC sp_executesql @grant;
+    PRINT 'granted DML on business schema: $(BIZ_SCHEMA)';
+END
+ELSE
+    PRINT 'WARNING: business schema not found, skipped: $(BIZ_SCHEMA)';
+GO
+
+-- (3) カタログ参照
+--     列定義・主キー・rowversion の有無は sys.columns / INFORMATION_SCHEMA から
+--     実行時に取得する。SQL Server はメタデータの可視性を権限に連動させるため,
+--     (1)(2) で SELECT を持つオブジェクトは追加の GRANT なしでカタログに見える。
+--     逆に権限の無いテーブルは登録候補にも出ない(意図した挙動)。
+--     そのため VIEW DEFINITION の付与は不要 — 与えると権限の無いテーブルまで
+--     定義が見えるようになるので, ここでは意図的に付与しない。
+
+-- (4) 与えていない権限について
+--     CONTROL は付与しない。スキーマの所有者はこのスクリプトの実行者(DBA)の
+--     ままなので, アプリのアカウントからは DROP SCHEMA も所有者変更もできない。
+--
+--     DENY は書かない。SQL Server では DENY が GRANT より優先されるため,
+--     例えば「削除防止のつもりで」DENY CONTROL ON SCHEMA を書くと,
+--     CONTROL に含まれる SELECT / INSERT なども巻き添えで拒否され,
+--     アプリが動かなくなる。付与しないことが最小権限であって,
+--     拒否を足すことではない。
+
+-- ---------------------------------------------------------------- 確認
+-- 付与された権限の一覧。スキーマ単位(class=3)とデータベース単位(class=0)の
+-- 両方を出す。CREATE TABLE は後者に出るので, これが無いと
+-- prod-app-schema.sql が「CREATE TABLE 権限がありません」で失敗する。
+SELECT
+    perm.state_desc                                    AS state,
+    perm.permission_name,
+    CASE perm.class
+        WHEN 0 THEN N'(database)'
+        WHEN 3 THEN SCHEMA_NAME(perm.major_id)
+        ELSE CONVERT(NVARCHAR(128), perm.class_desc)
+    END                                                AS scope
+FROM sys.database_permissions perm
+JOIN sys.database_principals dp
+  ON dp.principal_id = perm.grantee_principal_id
+WHERE dp.name = N'$(APP_LOGIN)'
+  AND perm.class IN (0, 3)
+ORDER BY scope, perm.permission_name;
+GO

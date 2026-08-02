@@ -1,0 +1,75 @@
+/* ホストが inline のままだと行ボックスの下端余白ぶん背が高くなり,
+   ヘッダーの中央揃えでボタンが他の項目より下へずれる。 */
+:host {
+  display: inline-flex;
+}
+.wrap {
+  position: relative;
+  display: inline-flex;
+}
+.user-btn {
+  background: transparent;
+  border: none;
+  color: var(--tm-text-on-primary);
+  font-size: 0.75rem;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
+  /* ヘッダーのテキスト要素と同じ高さ(中央線を揃えるのはヘッダー側の
+     align-items:center。ここは padding 依存の高さブレを無くすため) */
+  height: var(--tm-header-item-h);
+  padding: 0 0.5rem;
+  border-radius: var(--tm-radius);
+  cursor: pointer;
+}
+.user-btn:hover,
+.user-btn[aria-expanded='true'] {
+  background: rgba(255, 255, 255, 0.15);
+}
+.caret {
+  font-size: 0.6875rem;
+  opacity: 0.8;
+  transition: transform 0.15s;
+}
+.caret.up {
+  transform: rotate(180deg);
+}
+.drawer {
+  position: absolute;
+  top: calc(100% + 0.375rem);
+  right: 0;
+  min-width: 10.625rem;
+  background: var(--tm-surface);
+  color: var(--tm-text);
+  border: 1px solid var(--tm-border);
+  border-radius: var(--tm-radius);
+  box-shadow: 0 0.375rem 1.25rem rgba(0, 0, 0, 0.18);
+  padding: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  z-index: 90;
+}
+.item {
+  background: transparent;
+  border: none;
+  color: var(--tm-text);
+  font-size: 0.8125rem;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  border-radius: var(--tm-radius);
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+}
+.item:hover {
+  background: var(--tm-primary-tint);
+}
+.item .ic {
+  color: var(--tm-text-secondary);
+  font-size: 0.9375rem;
+}
+

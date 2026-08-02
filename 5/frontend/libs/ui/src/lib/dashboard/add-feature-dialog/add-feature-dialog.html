@@ -1,0 +1,220 @@
+<!-- 画面外クリックでは閉じない(誤操作防止。dialog.ts の disableClose)。Esc(1つ戻る)かボタンで閉じる。 -->
+<h2 mat-dialog-title class="head">
+  <span class="head-title">
+    @if (view() !== 'root') {
+      <button class="back" type="button" (click)="back()"
+        [attr.aria-label]="'common.back' | transloco">
+        <mat-icon class="ic" aria-hidden="true">arrow_back</mat-icon>
+      </button>
+    } @else {
+      <mat-icon class="ic" aria-hidden="true">add</mat-icon>
+    }
+    @if (view() === 'function') {
+      {{ currentFn()?.name }}
+    } @else {
+      {{ titleKey() | transloco }}
+    }
+  </span>
+  <button class="close" type="button" (click)="close()" [attr.aria-label]="'common.close' | transloco">
+    <mat-icon class="ic" aria-hidden="true">close</mat-icon>
+  </button>
+</h2>
+
+<mat-dialog-content class="body">
+  @if (errorMessage(); as msg) {
+    <p class="error">{{ msg }}</p>
+  }
+  @switch (view()) {
+    @case ('root') {
+      <button class="entry" type="button" (click)="push('shortcut')">
+        <mat-icon class="entry-icon ic" aria-hidden="true">apps</mat-icon>
+        <span class="entry-text">
+          <span class="entry-name">{{ 'addFeature.shortcut' | transloco }}</span>
+          <span class="entry-desc">{{ 'addFeature.shortcutDesc' | transloco }}</span>
+        </span>
+        <mat-icon class="ic" aria-hidden="true">chevron_right</mat-icon>
+      </button>
+      <button class="entry" type="button" (click)="push('templateMenu')">
+        <mat-icon class="entry-icon ic" aria-hidden="true">dashboard</mat-icon>
+        <span class="entry-text">
+          <span class="entry-name">{{ 'addFeature.templateMenu' | transloco }}</span>
+          <span class="entry-desc">{{ 'addFeature.templateMenuDesc' | transloco }}</span>
+        </span>
+        <mat-icon class="ic" aria-hidden="true">chevron_right</mat-icon>
+      </button>
+      <button class="entry" type="button" (click)="entrySelected.emit('reorder')">
+        <mat-icon class="entry-icon ic" aria-hidden="true">open_with</mat-icon>
+        <span class="entry-text">
+          <span class="entry-name">{{ 'addFeature.reorder' | transloco }}</span>
+          <span class="entry-desc">{{ 'addFeature.reorderDesc' | transloco }}</span>
+        </span>
+        <mat-icon class="ic" aria-hidden="true">chevron_right</mat-icon>
+      </button>
+    }
+
+    @case ('shortcut') {
+      @for (fn of functions(); track fn.code) {
+        <button class="entry" type="button" (click)="enterFunction(fn)">
+          <mat-icon class="entry-icon ic" aria-hidden="true">{{ fn.icon }}</mat-icon>
+          <span class="entry-text">
+            <span class="entry-name">{{ fn.name }}</span>
+          </span>
+          <mat-icon class="ic" aria-hidden="true">chevron_right</mat-icon>
+        </button>
+      }
+      <!-- URLリンクは機能の後(最下部)に置く -->
+      <button class="entry" type="button" (click)="push('link')">
+        <mat-icon class="entry-icon ic" aria-hidden="true">open_in_new</mat-icon>
+        <span class="entry-text">
+          <span class="entry-name">{{ 'addFeature.link' | transloco }}</span>
+          <span class="entry-desc">{{ 'addFeature.linkDesc' | transloco }}</span>
+        </span>
+        <mat-icon class="ic" aria-hidden="true">chevron_right</mat-icon>
+      </button>
+    }
+
+    @case ('templateMenu') {
+      <button class="entry" type="button" (click)="push('template')">
+        <mat-icon class="entry-icon ic" aria-hidden="true">dashboard</mat-icon>
+        <span class="entry-text">
+          <span class="entry-name">{{ 'addFeature.template' | transloco }}</span>
+          <span class="entry-desc">{{ 'addFeature.templateDesc' | transloco }}</span>
+        </span>
+        <mat-icon class="ic" aria-hidden="true">chevron_right</mat-icon>
+      </button>
+      <button class="entry" type="button" (click)="push('saveTemplate')">
+        <mat-icon class="entry-icon ic" aria-hidden="true">save</mat-icon>
+        <span class="entry-text">
+          <span class="entry-name">{{ 'addFeature.saveTemplate' | transloco }}</span>
+          <span class="entry-desc">{{ 'addFeature.saveTemplateDesc' | transloco }}</span>
+        </span>
+        <mat-icon class="ic" aria-hidden="true">chevron_right</mat-icon>
+      </button>
+    }
+
+    @case ('saveTemplate') {
+      <!-- 現在表示中のカード構成を個人テンプレートとして保存 -->
+      <label class="field">
+        <span class="label">{{ 'templateEditor.name' | transloco }}</span>
+        <input class="input" type="text" maxlength="128" [value]="tplName()"
+          (input)="tplName.set($any($event.target).value)" />
+      </label>
+      <p class="muted-note">{{ 'addFeature.saveTemplateHint' | transloco }}</p>
+      <div class="form-foot">
+        <button mat-flat-button color="primary" class="btn primary" type="button"
+          [disabled]="!canSaveTemplate() || saving()" (click)="submitTemplateSave()">
+          {{ (saving() ? 'common.saving' : 'common.save') | transloco }}
+        </button>
+      </div>
+    }
+
+    @case ('link') {
+      <!-- リンク追加フォーム(← で機能ショトカ追加へ戻れる) -->
+      <label class="field">
+        <span class="label">{{ 'linkDialog.name' | transloco }}</span>
+        <input class="input" type="text" maxlength="128" [value]="linkName()"
+          (input)="linkName.set($any($event.target).value)" />
+      </label>
+      <label class="field">
+        <span class="label">URL</span>
+        <input class="input mono" type="text" maxlength="512" placeholder="https://..."
+          [value]="linkUrl()" (input)="linkUrl.set($any($event.target).value)" />
+      </label>
+      <div class="form-foot">
+        <button mat-flat-button color="primary" class="btn primary" type="button"
+          [disabled]="!canSubmitLink() || saving()" (click)="submitLink()">
+          {{ (saving() ? 'common.saving' : 'common.add') | transloco }}
+        </button>
+      </div>
+    }
+
+    @case ('function') {
+      @if (currentFn(); as fn) {
+        <button class="entry" type="button" (click)="shortcutPicked.emit(fn)">
+          <mat-icon class="entry-icon ic" aria-hidden="true">{{ fn.icon }}</mat-icon>
+          <span class="entry-text">
+            <span class="entry-name">{{ 'addFeature.fnScreen' | transloco: { name: fn.name } }}</span>
+            <span class="entry-desc">{{ 'addFeature.fnScreenDesc' | transloco }}</span>
+          </span>
+        </button>
+        @if (fn.hasTables) {
+          <button class="entry" type="button" (click)="push('tables')">
+            <mat-icon class="entry-icon ic" aria-hidden="true">table_view</mat-icon>
+            <span class="entry-text">
+              <span class="entry-name">{{ 'addFeature.pickTable' | transloco }}</span>
+              <span class="entry-desc">{{ 'addFeature.pickTableDesc' | transloco }}</span>
+            </span>
+            <mat-icon class="ic" aria-hidden="true">chevron_right</mat-icon>
+          </button>
+        }
+      }
+    }
+
+    @case ('tables') {
+      @for (t of tables(); track t.id) {
+        <button class="entry" type="button" (click)="tablePicked.emit(t)">
+          <mat-icon class="entry-icon ic" aria-hidden="true">table_view</mat-icon>
+          <span class="entry-text">
+            <span class="entry-name">{{ t.displayName }}</span>
+            <span class="entry-desc mono">
+              @if (t.connectionName) {
+                {{ t.connectionName }}:
+              }{{ t.schemaName }}.{{ t.tableName }}
+            </span>
+          </span>
+        </button>
+      } @empty {
+        <p class="muted">{{ 'tablePick.empty' | transloco }}</p>
+      }
+    }
+
+    @case ('template') {
+      <button class="entry" type="button" [class.selected]="selectedTemplateId() === null"
+        (click)="templateSelected.emit(null)">
+        <mat-icon class="entry-icon ic" aria-hidden="true">grid_view</mat-icon>
+        <span class="entry-text">
+          <span class="entry-name">{{ 'templateSelect.default' | transloco }}</span>
+          <span class="entry-desc">{{ 'templateSelect.defaultDesc' | transloco }}</span>
+        </span>
+        @if (selectedTemplateId() === null) {
+          <mat-icon class="check ic" aria-hidden="true">check</mat-icon>
+        }
+      </button>
+      @for (t of templates(); track t.id) {
+        <button class="entry" type="button" [class.selected]="selectedTemplateId() === t.id"
+          [class.personal-tpl]="t.personal"
+          (click)="templateSelected.emit(t.id)">
+          <mat-icon class="entry-icon ic" aria-hidden="true">{{ t.personal ? 'person' : 'dashboard' }}</mat-icon>
+          <span class="entry-text">
+            <span class="entry-name">
+              {{ t.name }}
+              <!-- 配布(管理者)か個人(自分だけ)かをバッジで示す -->
+              @if (t.personal) {
+                <span class="tpl-badge personal">{{ 'templateSelect.badgePersonal' | transloco }}</span>
+              } @else {
+                <span class="tpl-badge">{{ 'templateSelect.badgeDist' | transloco }}</span>
+              }
+            </span>
+            @if (t.description) {
+              <span class="entry-desc">{{ t.description }}</span>
+            }
+          </span>
+          @if (selectedTemplateId() === t.id) {
+            <mat-icon class="check ic" aria-hidden="true">check</mat-icon>
+          }
+          @if (t.personal) {
+            <!-- 個人テンプレートは本人が削除できる -->
+            <span class="tpl-del" role="button" tabindex="0"
+              (click)="$event.stopPropagation(); personalTemplateDeleted.emit(t.id)"
+              (keydown.enter)="$event.stopPropagation(); personalTemplateDeleted.emit(t.id)"
+              [attr.aria-label]="'templateSelect.deletePersonalAria' | transloco">
+              <mat-icon class="ic" aria-hidden="true">delete</mat-icon>
+            </span>
+          }
+        </button>
+      } @empty {
+        <p class="muted">{{ 'templateSelect.empty' | transloco }}</p>
+      }
+    }
+  }
+</mat-dialog-content>
