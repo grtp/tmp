@@ -1,0 +1,52 @@
+/* シェル(tm-app-shell)の flex レイアウトに素通しする(自身の箱を持たない)。 */
+:host {
+  display: contents;
+}
+/* カード面の配置はホーム(tm-home-page .wrap)と揃える */
+.wrap {
+  padding: 1.5rem;
+  max-width: 80rem;
+  margin-inline: auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.75rem;
+}
+.card {
+  font-family: inherit;
+  text-align: left;
+  border: 1px solid var(--tm-border);
+  border-radius: var(--tm-radius);
+  background: var(--tm-surface);
+  padding: 1rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  /* transition が無いと,ホバー解除時に box-shadow の再描画範囲が
+     ブラウザ側で正しく無効化されず,境界線の残像が残ることがある
+     (Chromium の既知の再描画不具合)。ごく短い transition を入れることで
+     解消する。 */
+  transition: border-color 0.1s ease-out, box-shadow 0.1s ease-out;
+}
+.card:hover {
+  border-color: var(--tm-primary);
+  box-shadow: 0 0 0 0.125rem var(--tm-primary-tint);
+}
+.card-icon {
+  font-size: 1.5rem;
+  color: var(--tm-primary);
+}
+.card-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--tm-text);
+}
+.card-desc {
+  font-size: 0.6875rem;
+  color: var(--tm-text-muted);
+}
+

@@ -1,0 +1,292 @@
+/* シェル(tm-app-shell)の flex レイアウトに素通しする(自身の箱を持たない)。 */
+:host {
+  display: contents;
+}
+/* カード面の配置はホーム(tm-home-page .wrap)と揃える */
+.wrap {
+  padding: 1.5rem;
+  max-width: 80rem;
+  margin-inline: auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+.state {
+  color: var(--tm-text-muted);
+  font-size: 0.8125rem;
+  text-align: center;
+  padding: 1.75rem 0;
+  margin: 0;
+}
+
+/* ---- ツールバー(検索 + 件数 + 表示切替) */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.search {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  border: 1px solid var(--tm-border);
+  border-radius: var(--tm-radius);
+  background: var(--tm-surface);
+  padding: 0.375rem 0.625rem;
+  min-width: 16rem;
+  max-width: 24rem;
+  flex: 1;
+}
+.search:focus-within {
+  border-color: var(--tm-primary);
+  box-shadow: 0 0 0 0.125rem var(--tm-primary-tint);
+}
+.search .ic {
+  font-size: 1.125rem;
+  color: var(--tm-text-muted);
+  flex: none;
+}
+.search-in {
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--tm-text);
+  font-size: 0.8125rem;
+  font-family: inherit;
+  width: 100%;
+  min-width: 0;
+}
+.count {
+  font-size: 0.75rem;
+  color: var(--tm-text-muted);
+  white-space: nowrap;
+}
+.spacer {
+  flex: 1;
+}
+.view-toggle {
+  display: inline-flex;
+  border: 1px solid var(--tm-border-strong);
+  border-radius: var(--tm-radius);
+  overflow: hidden;
+}
+.view-toggle button {
+  display: flex;
+  align-items: center;
+  border: none;
+  background: var(--tm-surface);
+  color: var(--tm-text-secondary);
+  cursor: pointer;
+  padding: 0.3125rem 0.5rem;
+  border-right: 1px solid var(--tm-border);
+}
+.view-toggle button:last-child {
+  border-right: none;
+}
+.view-toggle button.on {
+  background: var(--tm-primary);
+  color: var(--tm-text-on-primary);
+}
+.view-toggle mat-icon {
+  font-size: 1.125rem;
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+/* ---- カード面: カード自体は常に固定幅(画面幅で伸縮しない)。
+   3*25rem+gap2本=76.75rem は .wrap の内容幅(80rem-左右padding=77rem)に
+   収まるため通常は1行3枚になるが,横に収まらない分は横スクロールではなく
+   折り返して次行へ送る(flex-wrap。カードの幅自体は変えない)。 */
+.cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.875rem;
+}
+.card {
+  flex: 0 0 25rem;
+  width: 25rem;
+  font-family: inherit;
+  text-align: left;
+  border: 1px solid var(--tm-border);
+  border-radius: var(--tm-radius);
+  background: var(--tm-surface);
+  padding: 1rem 1.125rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3125rem;
+  /* transition が無いと,ホバー解除時に box-shadow の再描画範囲が
+     ブラウザ側で正しく無効化されず,境界線の残像が残ることがある
+     (Chromium の既知の再描画不具合)。ごく短い transition を入れることで
+     解消する。 */
+  transition: border-color 0.1s ease-out, box-shadow 0.1s ease-out;
+}
+.card:hover {
+  border-color: var(--tm-primary);
+  box-shadow: 0 0 0 0.125rem var(--tm-primary-tint);
+}
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.card-icon {
+  font-size: 1.5rem;
+  color: var(--tm-primary);
+  flex-shrink: 0;
+}
+/* カード内の各テキストは1行に収め,収まらない分は…で省略する
+   (ホバーで title 属性から完全名が見える)。 */
+.conn-badge {
+  font-size: 0.6875rem;
+  background: var(--tm-primary-tint);
+  color: var(--tm-primary);
+  border-radius: 0.1875rem;
+  padding: 1px 0.375rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex: none;
+}
+.conn-badge.default {
+  background: var(--tm-surface-alt);
+  color: var(--tm-text-muted);
+}
+.card-name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--tm-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.card-table {
+  font-size: 0.75rem;
+  color: var(--tm-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mono {
+  font-family: var(--tm-font-mono);
+}
+/* 説明文が無いテーブルでも空欄として1行分の高さを確保し,カードの高さと
+   直下(.card-meta の罫線)の位置を揃える */
+.card-desc {
+  font-size: 0.75rem;
+  line-height: 1.125rem;
+  min-height: 1.125rem;
+  color: var(--tm-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.card-meta {
+  display: flex;
+  gap: 0.875rem;
+  margin-top: 0.25rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--tm-border);
+  font-size: 0.6875rem;
+  color: var(--tm-text-muted);
+}
+.card-meta span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* ---- リスト表示(密度優先。1行=1テーブル) */
+.list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--tm-border);
+  border-radius: var(--tm-radius);
+  background: var(--tm-surface);
+  overflow: hidden;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.875rem;
+  border: none;
+  border-bottom: 1px solid var(--tm-border);
+  background: transparent;
+  color: var(--tm-text);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  text-align: left;
+}
+.row:last-child {
+  border-bottom: none;
+}
+.row:hover {
+  background: var(--tm-primary-tint-weak);
+}
+.row .ic {
+  color: var(--tm-primary);
+  font-size: 1.125rem;
+  flex: none;
+}
+.row-name {
+  font-weight: 600;
+  flex: none;
+  max-width: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.row-table {
+  color: var(--tm-text-secondary);
+  font-size: 0.75rem;
+  flex: none;
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.row-desc {
+  flex: 1;
+  min-width: 0;
+  color: var(--tm-text-muted);
+  font-size: 0.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.row-activity {
+  flex: none;
+  color: var(--tm-text-muted);
+  font-size: 0.6875rem;
+  font-family: var(--tm-font-mono);
+}
+
+/* ---- 空状態(0件 / 検索ヒットなし) */
+.empty-hero {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  border: 1px dashed var(--tm-border-strong);
+  border-radius: var(--tm-radius);
+}
+.empty-ic {
+  font-size: 2.5rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  color: var(--tm-border-strong);
+}
+.empty-title {
+  font-weight: 600;
+  color: var(--tm-text);
+  margin: 0.5rem 0 0.125rem;
+}
+.empty-desc {
+  color: var(--tm-text-muted);
+  font-size: 0.8125rem;
+  margin: 0 0 1rem;
+}

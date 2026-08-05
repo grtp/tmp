@@ -1,0 +1,27 @@
+.head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+.icon {
+  color: var(--tm-primary);
+}
+.icon.danger {
+  color: var(--tm-danger);
+}
+.message {
+  font-size: 0.8125rem;
+  color: var(--tm-text-secondary);
+  margin: 0;
+  white-space: pre-line;
+}
+/* danger 時はグローバル .tm-btn.danger を使う(confirm-dialog.html 側で付与) */
+
+/* ボタン間隔。Material 既定(.mat-mdc-dialog-actions の 10px)は
+   .tm-btn 化(2026-08)後のコンパクトなボタンでは窮屈なため,
+   クラス付きセレクタで詳細度を上げて広げる */
+mat-dialog-actions.mat-mdc-dialog-actions {
+  gap: 1rem;
+}

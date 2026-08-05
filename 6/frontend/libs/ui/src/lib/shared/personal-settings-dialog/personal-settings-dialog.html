@@ -1,0 +1,74 @@
+<h2 mat-dialog-title class="head">
+  <span class="head-title">
+    <mat-icon class="ic" aria-hidden="true">tune</mat-icon>
+    {{ 'personalSettings.title' | transloco }}
+  </span>
+  <button class="close" type="button" (click)="close()" [attr.aria-label]="'common.close' | transloco">
+    <mat-icon class="ic" aria-hidden="true">close</mat-icon>
+  </button>
+</h2>
+
+<mat-dialog-content class="body">
+  @if (errorMessage(); as msg) {
+    <p class="error">{{ msg }}</p>
+  }
+
+  <div class="row">
+    <span class="row-label">{{ 'personalSettings.clock' | transloco }}</span>
+    <span class="seg">
+      @for (m of modes; track m) {
+        <button type="button" [class.on]="settings().headerClock === m"
+          (click)="clockModeChanged.emit(m)">
+          {{ 'personalSettings.clockMode.' + m | transloco }}
+        </button>
+      }
+    </span>
+  </div>
+
+  @if (settings().headerClock === 'custom') {
+    <div class="format-row">
+      <input class="format-in" type="text" [value]="format()"
+        [placeholder]="'personalSettings.clockFormatPlaceholder' | transloco"
+        (input)="onFormatInput($event)"
+        (change)="commitFormat()"
+        (keydown.enter)="commitFormat()" />
+      <button class="help-btn" type="button" (click)="helpOpen.set(!helpOpen())"
+        [class.on]="helpOpen()"
+        [attr.aria-label]="'personalSettings.clockHelp' | transloco: { sample: helpSampleLabel() }">
+        <mat-icon aria-hidden="true">help</mat-icon>
+      </button>
+    </div>
+    <p class="preview">
+      <span class="preview-label">{{ 'personalSettings.clockPreview' | transloco }}</span>
+      {{ preview() }}
+    </p>
+    @if (helpOpen()) {
+      <div class="help">
+        <p class="help-title">{{ 'personalSettings.clockHelp' | transloco: { sample: helpSampleLabel() } }}</p>
+        <table class="help-table">
+          <tbody>
+            @for (r of tokenRows(); track r.token) {
+              <tr>
+                <td class="tok">{{ r.token }}</td>
+                <td class="arrow" aria-hidden="true">→</td>
+                <td class="val">{{ r.value }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+        <p class="help-note">{{ 'personalSettings.clockHelpNote' | transloco }}</p>
+      </div>
+    }
+  }
+
+  <!-- 動作中イメージのバージョン(IMAGE_TAG)。障害問い合わせ時の特定用 -->
+  @if (version()) {
+    <p class="version">ver: {{ version() }}</p>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions class="foot">
+  <button class="btn" type="button" (click)="close()">
+    {{ 'common.close' | transloco }}
+  </button>
+</mat-dialog-actions>

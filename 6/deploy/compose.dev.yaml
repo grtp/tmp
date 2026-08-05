@@ -1,0 +1,110 @@
+# deploy/compose.dev.yaml
+# 開発用: SQL Server(+初期化) / OpenLDAP / Valkey を立てる。
+# backend / frontend は反復速度優先でホスト側で起動する:
+#   backend : make be_serve_mock            (LDAP_MOCK=true)
+#   backend : make be_serve_mock_ldap       (OpenLDAP 実物で認証)
+#   frontend: make fe_serve           (proxy.conf.json で /api -> :8080)
+#
+# 起動:  podman compose -f deploy/compose.dev.yaml up -d
+# 破棄:  podman compose -f deploy/compose.dev.yaml down -v
+#
+# SELinux が enforcing のホストではバインドマウントに :z が必要(付与済み)。
+
+services:
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: ft-mssql
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Fidev01!"
+      MSSQL_PID: Developer
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P 'Fidev01!' -Q 'SELECT 1' -b"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # 初期化はワンショットコンテナで行う(mssql イメージに initdb 機構がないため)。
+  # podman-compose は healthcheck condition を無視することがあるため,
+  # sqlcmd 成功までリトライするループで自衛する。
+  mssql-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: ft-mssql-init
+    depends_on:
+      mssql:
+        condition: service_healthy
+    volumes:
+      - ./initdb:/initdb:ro,z
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        for i in $(seq 1 60); do
+          /opt/mssql-tools18/bin/sqlcmd -C -S mssql -U sa -P 'Fidev01!' -Q 'SELECT 1' -b && break
+          echo "waiting for mssql ($i)"; sleep 2
+        done
+        /opt/mssql-tools18/bin/sqlcmd -C -S mssql -U sa -P 'Fidev01!' -i /initdb/01_init.sql -b
+    restart: "no"
+
+  # 開発用 OpenLDAP。AD の代替なので属性が異なる:
+  #   sAMAccountName -> uid / objectGUID -> entryUUID (テキストUUID)
+  # backend 側は LDAP_ATTR_* / LDAP_GUID_FORMAT で吸収する。
+  # 注意: ボリュームを消すと entryUUID が変わり,付与済み権限と紐付かなくなる。
+  ldap:
+    # bitnami 本家はタグ配布を終了したため,凍結アーカイブの bitnamilegacy を使う。
+    image: docker.io/bitnamilegacy/openldap:2.6
+    container_name: ft-ldap
+    environment:
+      LDAP_ADMIN_USERNAME: admin
+      LDAP_ADMIN_PASSWORD: Fidev01!
+      LDAP_ROOT: dc=example,dc=local
+      LDAP_CUSTOM_LDIF_DIR: /ldifs
+    ports:
+      - "1389:1389"
+    volumes:
+      - ./ldap:/ldifs:ro,z
+      - ldap-data:/bitnami/openldap
+
+  # セッションストア(TTL 30分スライディング)。
+  # Valkey は Redis 7.2 からの BSD ライセンスのフォークで RESP プロトコル互換。
+  # backend(go-redis) と環境変数 REDIS_ADDR は変更不要。
+  redis:
+    image: docker.io/valkey/valkey:8-alpine
+    container_name: ft-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # 監査履歴 detail の 1MB 超過分の退避先(任意機能。§S11)。
+  # backend 側で MINIO_ENDPOINT 等を設定しない限り使われない。
+  # バケット作成は backend 起動時に自動で行う(mc 等の初期化コンテナは無し)。
+  minio:
+    image: docker.io/minio/minio:latest
+    container_name: ft-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: devminio
+      MINIO_ROOT_PASSWORD: Fidev01!
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Web コンソール(開発確認用)
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  mssql-data:
+  ldap-data:
+  minio-data:

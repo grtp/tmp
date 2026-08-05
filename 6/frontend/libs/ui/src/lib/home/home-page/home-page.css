@@ -1,0 +1,43 @@
+/* シェル(tm-app-shell)の flex レイアウトに素通しする(自身の箱を持たない)。 */
+:host {
+  display: contents;
+}
+.wrap {
+  padding: 1.5rem;
+  max-width: 80rem;
+  margin-inline: auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* 最大3コマのグリッド。size-N がコマ数 = 横幅。画面幅で 3→2→1 に畳む。
+   minmax(0,1fr) はコンテンツ幅でコマが膨らむのを防ぐ(長文でも均等割)。 */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+.w {
+  min-width: 0;
+  /* ウィジェット内部は自身の幅(コマ数)に合わせる */
+  container-type: inline-size;
+}
+.size-1 { grid-column: span 1; }
+.size-2 { grid-column: span 2; }
+.size-3 { grid-column: span 3; }
+@media (max-width: 60rem) {
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .size-3 { grid-column: span 2; }
+}
+@media (max-width: 40rem) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .size-2, .size-3 { grid-column: span 1; }
+}
+
+.empty {
+  grid-column: 1 / -1;
+  color: var(--tm-text-muted);
+  padding: 2rem;
+  text-align: center;
+}

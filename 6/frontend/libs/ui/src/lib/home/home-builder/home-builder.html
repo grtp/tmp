@@ -1,0 +1,234 @@
+<div class="page">
+  @if (previewOpen()) {
+    <!-- 実際の表示の確認: 閲覧ページと同じレンダラに権限フィルタ済みを渡す。
+         本物のホームに寄せるため編集用の UI(ツールバー等)は一切出さず,
+         戻る手段だけを右下のフローティングボタンで置く -->
+    <div class="preview-area">
+      <tm-home-page [widgets]="previewWidgets()" [emptyText]="'home.noAccess' | transloco" />
+    </div>
+    <button class="tm-btn primary back-to-edit" type="button" (click)="previewOpen.set(false)">
+      <mat-icon aria-hidden="true">edit</mat-icon>
+      {{ 'homeBuilder.backToEdit' | transloco }}
+    </button>
+  } @else {
+  <div class="toolbar">
+    <h2 class="title">{{ 'homeBuilder.title' | transloco }}</h2>
+    @if (dirty()) {
+      <span class="dirty">{{ 'homeBuilder.dirty' | transloco }}</span>
+    }
+    <span class="spacer"></span>
+    <button class="tm-btn preview-btn" type="button" (click)="previewOpen.set(true)"
+      [attr.title]="'homeBuilder.preview' | transloco">
+      <mat-icon class="ic" aria-hidden="true">visibility</mat-icon>
+      <span class="lbl">{{ 'homeBuilder.preview' | transloco }}</span>
+    </button>
+    <button class="tm-btn" type="button" (click)="toggleJson()" title="JSON">
+      <mat-icon class="ic" aria-hidden="true">data_object</mat-icon>
+      <span class="lbl">JSON</span>
+    </button>
+    <button class="tm-btn" type="button" [disabled]="saving()" (click)="resetClicked.emit()"
+      [attr.title]="'homeBuilder.reset' | transloco">
+      <mat-icon class="ic" aria-hidden="true">restart_alt</mat-icon>
+      <span class="lbl">{{ 'homeBuilder.reset' | transloco }}</span>
+    </button>
+    <button class="tm-btn primary save-btn" type="button"
+      [disabled]="saving() || !dirty()" (click)="saveClicked.emit()"
+      [attr.title]="'homeBuilder.save' | transloco">
+      <mat-icon class="ic" aria-hidden="true">publish</mat-icon>
+      <span class="lbl">{{ (saving() ? 'common.saving' : 'homeBuilder.save') | transloco }}</span>
+    </button>
+  </div>
+
+  @if (errorMessage(); as msg) {
+    <p class="error">{{ msg }}</p>
+  }
+
+  @if (jsonOpen()) {
+    <div class="json-panel">
+      <textarea class="json-text" rows="12" spellcheck="false"
+        [value]="jsonDraft()"
+        (input)="jsonDraft.set(inputValue($event))"></textarea>
+      @if (jsonError(); as err) {
+        <p class="error json-error">{{ err }}</p>
+      }
+      <div class="json-actions">
+        <button class="tm-btn" type="button" (click)="refreshJson()">
+          {{ 'homeBuilder.jsonRefresh' | transloco }}
+        </button>
+        <button class="tm-btn primary json-apply" type="button" (click)="applyJson()">
+          {{ 'homeBuilder.jsonApply' | transloco }}
+        </button>
+      </div>
+    </div>
+  }
+
+  <div class="body">
+    <aside class="palette">
+      <h3 class="pane-title">{{ 'homeBuilder.palette' | transloco }}</h3>
+      @for (p of palette; track p.type) {
+        <button class="palette-item" type="button" (click)="add(p.type)">
+          <mat-icon class="ic" aria-hidden="true">{{ p.icon }}</mat-icon>
+          <span>{{ 'homeBuilder.type.' + p.type | transloco }}</span>
+          <mat-icon class="plus" aria-hidden="true">add</mat-icon>
+        </button>
+      }
+    </aside>
+
+    <div class="canvas" cdkDropList cdkDropListOrientation="mixed"
+      (cdkDropListDropped)="onDrop($event)">
+      @for (w of widgets(); track $index) {
+        <div cdkDrag role="button" tabindex="0"
+          [class]="'cell size-' + w.size + ($index === selected() ? ' sel' : '')"
+          (click)="select($index)" (keydown.enter)="select($index)">
+          <div class="chrome">
+            <mat-icon class="grip" cdkDragHandle aria-hidden="true">drag_indicator</mat-icon>
+            <span class="chrome-type">{{ 'homeBuilder.type.' + w.type | transloco }}</span>
+            @if (w.requires) {
+              <span class="chrome-req" [title]="'homeBuilder.fields.requires' | transloco">
+                <mat-icon aria-hidden="true">lock</mat-icon>{{ w.requires }}
+              </span>
+            }
+            <span class="spacer"></span>
+            <button class="chrome-btn" type="button" (click)="move($index, -1); $event.stopPropagation()"
+              [attr.aria-label]="'homeBuilder.moveUp' | transloco">
+              <mat-icon aria-hidden="true">arrow_upward</mat-icon>
+            </button>
+            <button class="chrome-btn" type="button" (click)="move($index, 1); $event.stopPropagation()"
+              [attr.aria-label]="'homeBuilder.moveDown' | transloco">
+              <mat-icon aria-hidden="true">arrow_downward</mat-icon>
+            </button>
+            <button class="chrome-btn danger" type="button" (click)="remove($index); $event.stopPropagation()"
+              [attr.aria-label]="'common.delete' | transloco">
+              <mat-icon aria-hidden="true">delete</mat-icon>
+            </button>
+          </div>
+          <div class="preview">
+            <tm-home-widget [widget]="w" />
+          </div>
+        </div>
+      } @empty {
+        <p class="canvas-empty">{{ 'homeBuilder.canvasEmpty' | transloco }}</p>
+      }
+    </div>
+
+    <aside class="inspector">
+      <h3 class="pane-title">{{ 'homeBuilder.inspector' | transloco }}</h3>
+      @if (selectedWidget(); as w) {
+        <div class="fields">
+          <span class="insp-type">{{ 'homeBuilder.type.' + w.type | transloco }}</span>
+
+          <div class="field">
+            <span class="field-label">{{ 'homeBuilder.fields.size' | transloco }}</span>
+            <span class="seg">
+              <button type="button" [class.on]="w.size === 1" (click)="setSize(1)">{{ 'homeBuilder.size1' | transloco }}</button>
+              <button type="button" [class.on]="w.size === 2" (click)="setSize(2)">{{ 'homeBuilder.size2' | transloco }}</button>
+              <button type="button" [class.on]="w.size === 3" (click)="setSize(3)">{{ 'homeBuilder.size3' | transloco }}</button>
+            </span>
+          </div>
+
+          <label class="field">
+            <span class="field-label">{{ 'homeBuilder.fields.requires' | transloco }}</span>
+            <select class="in" (change)="setRequires(inputValue($event))">
+              <option value="" [selected]="!w.requires">{{ 'homeBuilder.fields.requiresAll' | transloco }}</option>
+              @for (o of requiresOptions(); track o.code) {
+                <option [value]="o.code" [selected]="w.requires === o.code">{{ o.label }}</option>
+              }
+            </select>
+          </label>
+
+          @if (w.type === 'hero') {
+            <label class="field">
+              <span class="field-label">{{ 'homeBuilder.fields.title' | transloco }}</span>
+              <input class="in" type="text" [value]="w.title" (input)="patch({ title: inputValue($event) })" />
+            </label>
+            <label class="field">
+              <span class="field-label">{{ 'homeBuilder.fields.subtitle' | transloco }}</span>
+              <input class="in" type="text" [value]="w.subtitle ?? ''" (input)="patch({ subtitle: inputValue($event) })" />
+            </label>
+          }
+          @if (w.type === 'heading') {
+            <label class="field">
+              <span class="field-label">{{ 'homeBuilder.fields.text' | transloco }}</span>
+              <input class="in" type="text" [value]="w.text" (input)="patch({ text: inputValue($event) })" />
+            </label>
+          }
+          @if (w.type === 'text' || w.type === 'note') {
+            <label class="field">
+              <span class="field-label">{{ 'homeBuilder.fields.text' | transloco }}</span>
+              <textarea class="in" rows="4" [value]="w.text" (input)="patch({ text: inputValue($event) })"></textarea>
+            </label>
+          }
+          @if (w.type === 'note') {
+            <div class="field">
+              <span class="field-label">{{ 'homeBuilder.fields.tone' | transloco }}</span>
+              <span class="seg">
+                <button type="button" [class.on]="w.tone === 'info'" (click)="patch({ tone: 'info' })">{{ 'homeBuilder.fields.toneInfo' | transloco }}</button>
+                <button type="button" [class.on]="w.tone === 'warn'" (click)="patch({ tone: 'warn' })">{{ 'homeBuilder.fields.toneWarn' | transloco }}</button>
+              </span>
+            </div>
+          }
+          @if (w.type === 'rows' || w.type === 'pills' || w.type === 'cards') {
+            <label class="field">
+              <span class="field-label">{{ 'homeBuilder.fields.title' | transloco }}</span>
+              <input class="in" type="text" [value]="w.title ?? ''" (input)="patch({ title: inputValue($event) })" />
+            </label>
+          }
+
+          @if (hasItems()) {
+            <div class="items">
+              <span class="field-label">{{ 'homeBuilder.fields.items' | transloco }}</span>
+              @for (it of selectedItems(); track $index) {
+                <div class="item">
+                  <div class="item-head">
+                    <span class="item-no">#{{ $index + 1 }}</span>
+                    <span class="spacer"></span>
+                    <button class="chrome-btn" type="button" (click)="moveItem($index, -1)"
+                      [attr.aria-label]="'homeBuilder.moveUp' | transloco">
+                      <mat-icon aria-hidden="true">arrow_upward</mat-icon>
+                    </button>
+                    <button class="chrome-btn" type="button" (click)="moveItem($index, 1)"
+                      [attr.aria-label]="'homeBuilder.moveDown' | transloco">
+                      <mat-icon aria-hidden="true">arrow_downward</mat-icon>
+                    </button>
+                    <button class="chrome-btn danger" type="button" (click)="removeItem($index)"
+                      [attr.aria-label]="'common.delete' | transloco">
+                      <mat-icon aria-hidden="true">delete</mat-icon>
+                    </button>
+                  </div>
+                  <input class="in" type="text" [value]="it.label"
+                    [placeholder]="'homeBuilder.fields.label' | transloco"
+                    (input)="patchItem($index, { label: inputValue($event) })" />
+                  <input class="in" type="text" [value]="it.url"
+                    [placeholder]="'homeBuilder.fields.url' | transloco"
+                    (input)="patchItem($index, { url: inputValue($event) })" />
+                  <input class="in" type="text" [value]="it.icon ?? ''"
+                    [placeholder]="'homeBuilder.fields.icon' | transloco"
+                    (input)="patchItem($index, { icon: inputValue($event) })" />
+                  @if (selectedWidget()?.type === 'rows' || selectedWidget()?.type === 'cards') {
+                    <input class="in" type="text" [value]="it.desc ?? ''"
+                      [placeholder]="'homeBuilder.fields.desc' | transloco"
+                      (input)="patchItem($index, { desc: inputValue($event) })" />
+                  }
+                  <select class="in" [title]="'homeBuilder.fields.requires' | transloco"
+                    (change)="patchItem($index, { requires: inputValue($event) })">
+                    <option value="" [selected]="!it.requires">{{ 'homeBuilder.fields.requiresAll' | transloco }}</option>
+                    @for (o of requiresOptions(); track o.code) {
+                      <option [value]="o.code" [selected]="it.requires === o.code">{{ o.label }}</option>
+                    }
+                  </select>
+                </div>
+              }
+              <button class="tm-btn add-item" type="button" (click)="addItem()">
+                <mat-icon aria-hidden="true">add</mat-icon>
+                {{ 'homeBuilder.fields.addItem' | transloco }}
+              </button>
+            </div>
+          }
+        </div>
+      } @else {
+        <p class="insp-empty">{{ 'homeBuilder.inspectorEmpty' | transloco }}</p>
+      }
+    </aside>
+  </div>
+  }
+</div>

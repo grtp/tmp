@@ -1,0 +1,87 @@
+<div class="wrap">
+  <div class="toolbar">
+    <div class="search">
+      <mat-icon class="ic" aria-hidden="true">search</mat-icon>
+      <input
+        class="search-in"
+        type="text"
+        [value]="query()"
+        (input)="onQueryInput($event)"
+        [placeholder]="'tableSelect.searchPlaceholder' | transloco"
+      />
+    </div>
+    <span class="count">{{ 'tableSelect.count' | transloco: { n: filtered().length, total: tables().length } }}</span>
+    <span class="spacer"></span>
+    <span class="view-toggle">
+      <button type="button" [class.on]="view() === 'card'" (click)="setView('card')"
+        [attr.aria-label]="'tableSelect.viewCard' | transloco">
+        <mat-icon aria-hidden="true">grid_view</mat-icon>
+      </button>
+      <button type="button" [class.on]="view() === 'list'" (click)="setView('list')"
+        [attr.aria-label]="'tableSelect.viewList' | transloco">
+        <mat-icon aria-hidden="true">view_list</mat-icon>
+      </button>
+    </span>
+  </div>
+
+  @if (loading()) {
+    <p class="state">{{ 'common.loading' | transloco }}</p>
+  } @else if (tables().length === 0) {
+    <div class="empty-hero">
+      <mat-icon class="empty-ic" aria-hidden="true">table_view</mat-icon>
+      <p class="empty-title">{{ 'tableSelect.emptyTitle' | transloco }}</p>
+      <p class="empty-desc">{{ 'tableSelect.emptyDesc' | transloco }}</p>
+      @if (canManage()) {
+        <button class="tm-btn primary" type="button" (click)="manageClicked.emit()">
+          <mat-icon aria-hidden="true">add</mat-icon>
+          {{ 'tableSelect.emptyAction' | transloco }}
+        </button>
+      }
+    </div>
+  } @else if (filtered().length === 0) {
+    <p class="state">{{ 'tableSelect.noMatch' | transloco }}</p>
+  } @else if (view() === 'card') {
+    <div class="cards">
+      @for (t of filtered(); track t.id) {
+        <button class="card" type="button" (click)="tableSelected.emit(t.id)">
+          <span class="card-head">
+            <mat-icon class="card-icon ic" aria-hidden="true">table_view</mat-icon>
+            @if (t.connectionName) {
+              <span class="conn-badge" [title]="t.connectionName">{{ t.connectionName }}</span>
+            } @else {
+              <span class="conn-badge default" [title]="'common.defaultDb' | transloco">{{ 'common.defaultDb' | transloco }}</span>
+            }
+          </span>
+          <span class="card-name" [title]="t.displayName">{{ t.displayName }}</span>
+          <span class="card-table mono" [title]="t.schemaName + '.' + t.tableName">{{ t.schemaName }}.{{ t.tableName }}</span>
+          <span class="card-desc" [title]="t.description ?? ''">{{ t.description }}</span>
+          <span class="card-meta">
+            <span [title]="'tableSelect.createdAt' | transloco">{{ 'tableSelect.registered' | transloco }} {{ t.createdAt | date: 'yyyy-MM-dd' : '+0900' }}</span>
+            @if (t.lastActivityAt) {
+              <span [title]="'tableSelect.lastActivityAt' | transloco">{{ 'tableSelect.lastActivity' | transloco }} {{ t.lastActivityAt | date: 'yyyy-MM-dd HH:mm' : '+0900' }}</span>
+            }
+          </span>
+        </button>
+      }
+    </div>
+  } @else {
+    <div class="list">
+      @for (t of filtered(); track t.id) {
+        <button class="row" type="button" (click)="tableSelected.emit(t.id)">
+          <mat-icon class="ic" aria-hidden="true">table_view</mat-icon>
+          <span class="row-name" [title]="t.displayName">{{ t.displayName }}</span>
+          <span class="row-table mono" [title]="t.schemaName + '.' + t.tableName">{{ t.schemaName }}.{{ t.tableName }}</span>
+          @if (t.connectionName) {
+            <span class="conn-badge" [title]="t.connectionName">{{ t.connectionName }}</span>
+          } @else {
+            <span class="conn-badge default" [title]="'common.defaultDb' | transloco">{{ 'common.defaultDb' | transloco }}</span>
+          }
+          <span class="row-desc" [title]="t.description ?? ''">{{ t.description }}</span>
+          @if (t.lastActivityAt) {
+            <span class="row-activity" [title]="'tableSelect.lastActivityAt' | transloco">{{ t.lastActivityAt | date: 'yyyy-MM-dd HH:mm' : '+0900' }}</span>
+          }
+        </button>
+      }
+    </div>
+  }
+</div>
