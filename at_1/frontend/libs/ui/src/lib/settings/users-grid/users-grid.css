@@ -1,0 +1,53 @@
+
+:host {
+  display: contents;
+}
+
+
+.user-name {
+  font-weight: 600;
+}
+.user-id {
+  color: var(--tm-text-muted);
+  font-family: var(--tm-font-mono);
+}
+
+
+.level-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+  border: none;
+  background: transparent;
+  font-size: 0.75rem;
+  font-family: inherit;
+  color: var(--tm-text);
+  padding: 0.25rem 0.25rem 0.25rem 0.375rem;
+  border-radius: var(--tm-radius);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.level-btn.none {
+  color: var(--tm-text-muted);
+}
+
+.level-btn.admin,
+.level-btn.admin:hover,
+button.admin {
+  color: var(--tm-danger);
+}
+.level-btn:hover {
+  background: var(--tm-primary-tint-weak);
+  color: var(--tm-primary);
+}
+.level-btn .caret {
+  font-size: 1rem;
+  color: var(--tm-text-muted);
+}
+.level-btn:hover .caret {
+  color: var(--tm-primary);
+}
+
+button.selected {
+  background: var(--tm-primary-tint);
+}

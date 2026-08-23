@@ -1,0 +1,74 @@
+
+<h2 mat-dialog-title class="head">
+  <span class="head-title">
+    <mat-icon class="ic" aria-hidden="true">upload</mat-icon>
+    {{ 'csvImport.title' | transloco }}
+  </span>
+  <span class="summary">
+    {{ 'csvImport.summary' | transloco: { total: workRows().length, conflicts: conflictCount(), errors: typeErrorCount() } }}
+  </span>
+  <button class="close" type="button" (click)="cancel()" [attr.aria-label]="'common.close' | transloco">
+    <mat-icon class="ic" aria-hidden="true">close</mat-icon>
+  </button>
+</h2>
+
+<mat-dialog-content class="body">
+  @if (identityNote) {
+    <p class="note">
+      <mat-icon class="ic" aria-hidden="true">info</mat-icon>
+      {{ 'csvImport.identityNote' | transloco }}
+    </p>
+  }
+
+  <div class="legend">
+    <span class="legend-item"><span class="swatch conflict"></span>{{ 'csvImport.legendConflict' | transloco }}</span>
+    <span class="legend-item"><span class="swatch type-error"></span>{{ 'csvImport.legendTypeError' | transloco }}</span>
+  </div>
+
+  <div class="table" [style.--cols]="colsStyle()">
+    <div class="hrow">
+      @for (col of columns; track col.key) {
+        <span class="hcell">{{ col.label }}</span>
+      }
+    </div>
+    <div class="rows">
+      @for (row of workRows(); track $index; let i = $index) {
+        <div
+          class="row"
+          [class.conflict]="row.conflict"
+          [class.type-error]="row.typeError"
+          [class.selected]="selected().has(i)"
+          [attr.title]="row.typeError ?? null"
+          (pointerdown)="onRowDown(i, $event)"
+          (pointerenter)="onRowEnter(i)"
+        >
+          @for (col of columns; track col.key) {
+            <span class="cell">{{ row.display[col.key] }}</span>
+          }
+        </div>
+      } @empty {
+        <p class="empty">{{ 'csvImport.empty' | transloco }}</p>
+      }
+    </div>
+  </div>
+
+  <p class="apply-hint">{{ 'csvImport.applyHint' | transloco }}</p>
+</mat-dialog-content>
+
+<mat-dialog-actions class="foot">
+  <button class="btn" type="button" [disabled]="conflictCount() === 0 || busy()" (click)="removeConflicts()">
+    <mat-icon class="ic" aria-hidden="true">ink_eraser</mat-icon>
+    {{ 'csvImport.removeConflicts' | transloco }}
+  </button>
+  <button class="btn" type="button" [disabled]="selected().size === 0 || busy()" (click)="removeSelected()">
+    <mat-icon class="ic" aria-hidden="true">playlist_remove</mat-icon>
+    {{ 'csvImport.removeSelected' | transloco }} ({{ selected().size }})
+  </button>
+  <span class="foot-spacer"></span>
+  <button class="btn" type="button" [disabled]="busy()" (click)="cancel()">
+    {{ 'common.cancel' | transloco }}
+  </button>
+  <button class="btn primary" type="button" [disabled]="effectiveCount() === 0 || busy()" (click)="apply()">
+    {{ 'csvImport.apply' | transloco }} ({{ effectiveCount() }})
+  </button>
+</mat-dialog-actions>

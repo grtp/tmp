@@ -1,0 +1,10 @@
+<tm-app-shell
+  [userName]="userName()"
+  [clockMode]="clockMode()"
+  [clockFormat]="clockFormat()"
+  [activeMenuId]="activeMenuId()"
+  [menuItems]="menuItems()"
+  (menuSelected)="onMenu($event)"
+>
+  <router-outlet />
+</tm-app-shell>

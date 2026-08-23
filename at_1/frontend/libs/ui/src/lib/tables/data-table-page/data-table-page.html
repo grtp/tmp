@@ -1,0 +1,337 @@
+<div
+  class="panel"
+  (dragenter)="onDragEnter($event)"
+  (dragover)="onDragOver($event)"
+  (dragleave)="onDragLeave()"
+  (drop)="onDrop($event)"
+>
+  
+  @if (csvDragActive()) {
+    <div class="drop-overlay" aria-hidden="true">
+      <mat-icon class="ic">upload</mat-icon> {{ 'csvImport.dropHint' | transloco }}
+    </div>
+  }
+  <div class="toolbar">
+    @if (tableNames().length > 1) {
+      <select
+        class="table-select"
+        [value]="selectedTable()"
+        (change)="tableChanged.emit($any($event.target).value)"
+      >
+        @for (name of tableNames(); track name) {
+          <option [value]="name">{{ name }}</option>
+        }
+      </select>
+    } @else {
+      <span class="table-label" [title]="selectedTable()">{{ selectedTable() }}</span>
+    }
+    <span class="spacer"></span>
+    
+    @if (sortableColumns().length > 0) {
+      
+      <button
+        class="tm-btn sort-toggle"
+        type="button"
+        [class.active]="sortPop() !== null || sortKey() !== null"
+        (click)="openSortPicker($event)"
+        [attr.title]="'dataTable.sortToggle' | transloco"
+      >
+        <mat-icon class="ic" aria-hidden="true">swap_vert</mat-icon>
+        <span class="lbl">{{ 'dataTable.sortToggle' | transloco }}</span>
+      </button>
+    }
+    @if (filterColumns().length > 0) {
+      
+      <button
+        class="tm-btn filter-toggle"
+        type="button"
+        [class.active]="filterPopOpen() || predicates().length > 0"
+        (click)="onFilterButton($event)"
+        [attr.title]="'dataTable.filterToggle' | transloco"
+      >
+        <mat-icon class="ic" aria-hidden="true">manage_search</mat-icon>
+        <span class="lbl">{{ 'dataTable.filterToggle' | transloco }}</span>
+        @if (predicates().length > 0) {
+          <span class="filter-count">{{ predicates().length }}</span>
+        }
+      </button>
+    }
+    @if (canCreate()) {
+      @if (selectedPendingCount() > 0) {
+        <button
+          class="tm-btn primary save-pending"
+          type="button"
+          [attr.title]="'dataTable.savePending' | transloco"
+          (click)="onSavePending()"
+        >
+          <mat-icon class="ic" aria-hidden="true">save</mat-icon>
+          <span class="lbl">{{ 'dataTable.savePending' | transloco }} ({{ selectedPendingCount() }})</span>
+        </button>
+      }
+      @if (selectedCount() > 0) {
+        <button
+          class="tm-btn danger bulk-delete"
+          type="button"
+          [attr.title]="'dataTable.bulkDelete' | transloco"
+          (click)="onBulkDelete()"
+        >
+          <mat-icon class="ic" aria-hidden="true">delete</mat-icon>
+          <span class="lbl">{{ 'dataTable.bulkDelete' | transloco }} ({{ selectedCount() }})</span>
+        </button>
+      }
+    }
+    @if (showCsvExport()) {
+      <button
+        class="tm-btn csv-export"
+        type="button"
+        [attr.title]="'csvExport.title' | transloco"
+        (click)="onCsvExport()"
+      >
+        <mat-icon class="ic" aria-hidden="true">download</mat-icon>
+        <span class="lbl">{{ 'csvExport.title' | transloco }}</span>
+      </button>
+    }
+    @if (canCreate()) {
+      <button
+        class="tm-btn csv-export"
+        type="button"
+        [disabled]="insertBlockedColumns().length > 0"
+        [attr.title]="insertBlockedColumns().length > 0
+          ? ('dataTable.insertBlocked' | transloco: { cols: insertBlockedColumns().join(', ') })
+          : ('csvImport.title' | transloco)"
+        (click)="fileInput.click()"
+      >
+        <mat-icon class="ic" aria-hidden="true">upload</mat-icon>
+        <span class="lbl">{{ 'csvImport.title' | transloco }}</span>
+      </button>
+      <input
+        #fileInput
+        class="file-input"
+        type="file"
+        accept=".csv,text/csv"
+        (change)="onCsvFileSelected($any($event.target))"
+      />
+    }
+    @if (showMultiSelect()) {
+      @if (multiSelectMode()) {
+        
+        <button
+          class="tm-btn select-all"
+          type="button"
+          [attr.title]="(allChecked() ? 'dataTable.selectAllOff' : 'dataTable.selectAllOn') | transloco"
+          (click)="toggleSelectAll()"
+        >
+          <mat-icon class="ic" aria-hidden="true">{{ allChecked() ? 'deselect' : 'select_all' }}</mat-icon>
+          <span class="lbl">{{ (allChecked() ? 'dataTable.selectAllOff' : 'dataTable.selectAllOn') | transloco }}</span>
+        </button>
+      }
+      <button
+        class="tm-btn multi-toggle"
+        type="button"
+        [class.active]="multiSelectMode()"
+        [attr.title]="'dataTable.multiSelect' | transloco"
+        (click)="toggleMultiSelect()"
+        [attr.aria-pressed]="multiSelectMode()"
+      >
+        <mat-icon class="ic" aria-hidden="true">check_box</mat-icon>
+        <span class="lbl">{{ 'dataTable.multiSelect' | transloco }}</span>
+      </button>
+    }
+    @if (canCreate()) {
+      <button
+        class="tm-btn primary create"
+        type="button"
+        [disabled]="insertBlockedColumns().length > 0"
+        [attr.title]="insertBlockedColumns().length > 0
+          ? ('dataTable.insertBlocked' | transloco: { cols: insertBlockedColumns().join(', ') })
+          : ('dataTable.create' | transloco)"
+        (click)="createClicked.emit()"
+      >
+        <mat-icon class="ic" aria-hidden="true">add</mat-icon> <span class="lbl">{{ 'dataTable.create' | transloco }}</span>
+      </button>
+    }
+    
+    <ng-content select="[toolbarActions]" />
+  </div>
+
+  
+  @if (filterColumns().length > 0 || sortableColumns().length > 0) {
+    <div class="filter-bar-row" [class.bare]="predicates().length === 0 && sortKey() === null">
+      @if (sortKey(); as key) {
+        <span class="chip sort-chip">
+          <button class="chip-body" type="button" (click)="openSortPicker($event)">
+            {{ sortChipLabel() }}
+          </button>
+          <button class="chip-x" type="button" (click)="clearSort($event)"
+            [attr.aria-label]="'filterBar.removeAria' | transloco">
+            <mat-icon class="ic" aria-hidden="true">close</mat-icon>
+          </button>
+        </span>
+      }
+      @if (filterColumns().length > 0) {
+        <tm-filter-bar
+          [columns]="filterColumns()"
+          [predicates]="predicates()"
+          (predicatesChange)="predicatesChange.emit($event)"
+          (openChanged)="onFilterOpenChanged($event)"
+        />
+      }
+    </div>
+  }
+
+  
+  @if (sortPop(); as sp) {
+    <div class="popover sort-popover" #sortPopoverEl
+      [style.left.px]="sp.left" [style.top.px]="sp.top">
+      <div class="col-search-wrap">
+        <input
+          class="col-search"
+          type="search"
+          [placeholder]="'filterBar.columnSearch' | transloco"
+          [value]="sortSearch()"
+          (input)="sortSearch.set($any($event.target).value)"
+        />
+      </div>
+      <ul class="col-list">
+        @for (col of filteredSortColumns(); track col.key) {
+          <li>
+            <button class="col-item" type="button" (click)="onSortColumnPicked(col)">
+              <span class="col-label">{{ col.label }}</span>
+              @if (sortKey() === col.key) {
+                <mat-icon class="ic active" aria-hidden="true">{{
+                  sortDir() === 'asc' ? 'arrow_upward' : 'arrow_downward'
+                }}</mat-icon>
+              }
+            </button>
+          </li>
+        }
+      </ul>
+    </div>
+  }
+
+  <div class="table-wrap">
+    <table class="table" [tmResizeColumns]="storageKey()" [tmAutoFit]="true">
+      <thead>
+        <tr>
+          @for (col of columns(); track col.key) {
+            <th [attr.data-col]="col.key" [tmOverflowTitle]="col.label"
+              [class.num]="col.align === 'right'"
+            >
+              <span class="th-label">{{ col.label }}</span>
+              
+              @if (col.sortable && sortKey() === col.key) {
+                <mat-icon class="sort-ic active" aria-hidden="true">{{
+                  sortDir() === 'asc' ? 'arrow_upward' : 'arrow_downward'
+                }}</mat-icon>
+              }
+            </th>
+          }
+        </tr>
+      </thead>
+      <tbody [class.no-select]="multiSelectMode()">
+        @if (loading()) {
+          
+          <tr data-tm-loading>
+            <td class="state-cell" [attr.colspan]="colspan()">
+              {{ 'common.loading' | transloco }}
+            </td>
+          </tr>
+        } @else {
+          @for (row of allRows(); track $index; let i = $index, odd = $odd) {
+            <tr
+              [class.odd]="odd"
+              [class.checked]="selected().has(i)"
+              [class.pending]="isPending(i)"
+              (click)="onRowClick(i, row)"
+              (pointerdown)="onRowPointerDown(i, $event)"
+              (pointerenter)="onRowPointerEnter(i)"
+            >
+              @for (col of columns(); track col.key; let firstCol = $first) {
+                <td [class.mono]="col.mono" [class.num]="col.align === 'right'"
+                  [tmOverflowTitle]="col.template ? null : row[col.key]">
+                  
+                  @if (firstCol && isPending(i)) {
+                    <span class="pending-mark" [attr.title]="'dataTable.pendingHint' | transloco">*</span>
+                  }@if (col.template) {
+                    <ng-container *ngTemplateOutlet="col.template; context: { $implicit: row, col: col }" />
+                  } @else {{{ row[col.key] }}}
+                </td>
+              }
+            </tr>
+            
+            @if (i === expandedIndex()) {
+              @if (expandTemplate(); as tpl) {
+                <tr class="expand-row">
+                  <td [attr.colspan]="colspan()">
+                    <ng-container *ngTemplateOutlet="tpl; context: { $implicit: row }" />
+                  </td>
+                </tr>
+              }
+            }
+          } @empty {
+            <tr>
+              <td class="state-cell" [attr.colspan]="colspan()">
+                {{ 'dataTable.empty' | transloco }}
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <div class="footer">
+    @if (totalCount() === 0) {
+      <span>{{ 'common.rangeEmpty' | transloco }}</span>
+    } @else {
+      <span>{{ 'common.range' | transloco: rangeParams() }}</span>
+    }
+    <span class="footer-right">
+      
+      @if (totalPages() > 1) {
+        <label class="page-size">
+          {{ 'dataTable.pageJump' | transloco }}
+          <select
+            class="page-jump-select"
+            (change)="pageChanged.emit(+$any($event.target).value)"
+            [attr.aria-label]="'dataTable.pageJump' | transloco"
+          >
+            @for (n of pageNumbers(); track n) {
+              <option [value]="n" [selected]="n === page()">{{ n }}</option>
+            }
+          </select>
+        </label>
+        <label class="page-size">
+          {{ 'dataTable.pageSize' | transloco }}
+          <select
+            class="page-size-select"
+            (change)="pageSizeChanged.emit(+$any($event.target).value)"
+          >
+            
+            @for (n of PAGE_SIZES; track n) {
+              <option [value]="n" [selected]="n === pageSize()">{{ n }}</option>
+            }
+          </select>
+        </label>
+      }
+    <span class="pager">
+      <button
+        class="pager-btn"
+        type="button"
+        [disabled]="page() <= 1"
+        (click)="pageChanged.emit(page() - 1)"
+        [attr.aria-label]="'common.prevPage' | transloco"
+      >‹</button>
+      {{ page() }} / {{ totalPages() }}
+      <button
+        class="pager-btn"
+        type="button"
+        [disabled]="page() >= totalPages()"
+        (click)="pageChanged.emit(page() + 1)"
+        [attr.aria-label]="'common.nextPage' | transloco"
+      >›</button>
+    </span>
+    </span>
+  </div>
+</div>
+

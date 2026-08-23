@@ -1,0 +1,13 @@
+
+@import 'material-symbols/outlined.css';
+@import '../../../libs/ui/src/styles/tokens.css';
+@import '../../../libs/ui/src/styles/buttons.css';
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--tm-page-bg);
+  color: var(--tm-text);
+  font-family: var(--tm-font);
+}

@@ -1,0 +1,59 @@
+
+:host {
+  display: contents;
+}
+
+.tabs-head {
+  margin: 1rem 1rem 0;
+  background: var(--tm-surface);
+  border: 1px solid var(--tm-border);
+  border-radius: var(--tm-radius);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.tabs {
+  background: var(--tm-surface-alt);
+}
+.tab-ic {
+  margin-right: 0.375rem;
+}
+
+.tabs-head + mat-tab-nav-panel ::ng-deep .panel {
+  margin-top: 0.5rem;
+}
+
+
+.muted {
+  color: var(--tm-text-muted);
+}
+.conn-badge {
+  font-size: 0.6875rem;
+  background: var(--tm-primary-tint);
+  color: var(--tm-primary);
+  border-radius: 0.1875rem;
+  padding: 1px 0.375rem;
+  
+  display: inline-block;
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.ops {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.icon-btn {
+  width: 2rem;
+  height: 2rem;
+  padding: 0.25rem;
+  color: var(--tm-text-secondary);
+}
+.icon-btn.danger {
+  color: var(--tm-danger);
+}
+
