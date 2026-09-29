@@ -1,0 +1,45 @@
+<tm-data-table-page
+  [selectedTable]="title()"
+  [columns]="columnDefs()"
+  [rows]="displayRows()"
+  [totalCount]="groups().length"
+  [loading]="loading()"
+  [canCreate]="false"
+  [showMultiSelect]="false"
+  [showCsvExport]="false"
+  storageKey="ftool.colw:settings:groupAuth"
+/>
+
+
+<ng-template #groupTpl let-row>
+  <mat-icon class="ic group-ic" aria-hidden="true">group</mat-icon>
+  <span class="group-name">{{ rowOf(row)?.name }}</span>
+  @if (rowOf(row)?.description; as d) {
+    <span class="group-desc"> {{ d }}</span>
+  }
+</ng-template>
+
+
+<ng-template #levelTpl let-row let-col="col">
+  <button
+    class="tm-level-btn"
+    type="button"
+    [class.none]="levelOf(row, col) === ''"
+    [class.admin]="levelOf(row, col) === 'admin'"
+    [matMenuTriggerFor]="levelMenu"
+    (click)="$event.stopPropagation()"
+  >
+    {{ levelLabel(levelOf(row, col)) }}
+    <mat-icon class="ic caret" aria-hidden="true">arrow_drop_down</mat-icon>
+  </button>
+  <mat-menu #levelMenu="matMenu" class="tm-level-menu">
+    @for (lv of LEVELS; track lv) {
+      <button mat-menu-item type="button"
+        [class.selected]="levelOf(row, col) === lv"
+        [class.admin]="lv === 'admin'"
+        (click)="onLevelChange(row, col, lv)">
+        {{ levelLabel(lv) }}
+      </button>
+    }
+  </mat-menu>
+</ng-template>

@@ -1,0 +1,11 @@
+@if (errorMessage(); as msg) {
+  <p class="error">{{ msg }}</p>
+}
+
+<tm-groups-page
+  [groups]="settingsGroups()"
+  [loading]="loading()"
+  (addClicked)="openCreate()"
+  (editClicked)="openEdit($event)"
+  (deleteClicked)="askDelete($event)"
+/>

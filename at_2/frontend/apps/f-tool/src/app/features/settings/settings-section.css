@@ -1,0 +1,13 @@
+
+:host {
+  display: contents;
+}
+.error {
+  margin: 0.75rem 1rem 0;
+  padding: 0.5rem 0.625rem;
+  background: var(--tm-danger-bg);
+  color: var(--tm-danger);
+  border-radius: var(--tm-radius);
+  font-size: 0.75rem;
+}
+

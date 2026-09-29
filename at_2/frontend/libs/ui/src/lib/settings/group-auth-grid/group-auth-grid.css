@@ -1,0 +1,18 @@
+
+:host {
+  display: contents;
+}
+
+.group-ic {
+  font-size: 1rem;
+  color: var(--tm-primary);
+  vertical-align: middle;
+  margin-right: 0.25rem;
+}
+.group-name {
+  font-weight: 600;
+}
+.group-desc {
+  color: var(--tm-text-muted);
+  font-size: 0.6875rem;
+}
