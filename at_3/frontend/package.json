@@ -1,0 +1,44 @@
+{
+  "name": "@f-tool/source",
+  "version": "0.0.0",
+  "license": "MIT",
+  "scripts": {
+    "start": "ng serve",
+    "build": "ng build",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "generate:api": "openapi-typescript ../api/openapi.yaml -o apps/f-tool/src/app/core/gen/api-types.ts --default-non-nullable=false && prettier --write apps/f-tool/src/app/core/gen/api-types.ts"
+  },
+  "private": true,
+  "dependencies": {
+    "@angular/cdk": "^21.2.14",
+    "@angular/common": "~21.2.0",
+    "@angular/compiler": "~21.2.0",
+    "@angular/core": "~21.2.0",
+    "@angular/forms": "~21.2.0",
+    "@angular/material": "^21.2.14",
+    "@angular/platform-browser": "~21.2.0",
+    "@angular/router": "~21.2.0",
+    "@jsverse/transloco": "^7.6.1",
+    "material-symbols": "^0.45.8",
+    "rxjs": "~7.8.0"
+  },
+  "devDependencies": {
+    "@angular/build": "~21.2.0",
+    "@angular/cli": "~21.2.0",
+    "@angular/compiler-cli": "~21.2.0",
+    "@angular/language-service": "~21.2.0",
+    "@eslint/js": "^9.8.0",
+    "angular-eslint": "^21.2.0",
+    "eslint": "^9.8.0",
+    "eslint-config-prettier": "^10.0.0",
+    "fast-check": "^4.9.0",
+    "openapi-typescript": "^7.13.0",
+    "prettier": "~3.6.2",
+    "tslib": "^2.3.0",
+    "typescript": "~5.9.2",
+    "typescript-eslint": "^8.40.0",
+    "vitest": "^4.1.10"
+  }
+}

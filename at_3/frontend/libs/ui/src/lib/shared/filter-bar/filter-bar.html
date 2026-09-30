@@ -1,0 +1,124 @@
+<div class="bar">
+  @for (p of predicates(); track $index) {
+    <span class="chip" [class.negate]="p.negate">
+      <button class="chip-body" type="button" (click)="openEdit($index, $event)"
+        [attr.aria-label]="'filterBar.editAria' | transloco">
+        {{ chipTextOf(p) }}
+      </button>
+      <button class="chip-x" type="button" (click)="remove($index)"
+        [attr.aria-label]="'filterBar.removeAria' | transloco">
+        <mat-icon class="ic" aria-hidden="true">close</mat-icon>
+      </button>
+    </span>
+  }
+  
+  @if (columns().length > 0 && predicates().length > 0) {
+    <button class="add" type="button" (click)="openColumnPicker($event)">
+      <mat-icon class="ic" aria-hidden="true">add</mat-icon>
+      {{ 'filterBar.addFilter' | transloco }}
+    </button>
+  }
+  @if (predicates().length > 1) {
+    <button class="clear" type="button" (click)="clearAll()">
+      {{ 'filterBar.clearAll' | transloco }}
+    </button>
+  }
+
+  @if (pop(); as popState) {
+    <div class="popover" [style.left.px]="popState.left" [style.top.px]="popState.top">
+      @if (popState.mode === 'column') {
+        <div class="col-search-wrap">
+          <input
+            class="col-search"
+            type="search"
+            [placeholder]="'filterBar.columnSearch' | transloco"
+            [value]="colSearch()"
+            (input)="colSearch.set($any($event.target).value)"
+          />
+        </div>
+        <ul class="col-list">
+          @for (c of filteredColumns(); track c.key) {
+            <li>
+              <button class="col-item" type="button" (click)="pickColumn(c.key)">
+                <span class="col-label">{{ c.label }}</span>
+                <span class="col-type">{{ typeKey(c.type) | transloco }}</span>
+              </button>
+            </li>
+          }
+        </ul>
+      } @else if (editColumn(); as col) {
+        <p class="cond-title">{{ 'filterBar.conditionTitle' | transloco: { col: col.label } }}</p>
+        <div class="cond-row">
+          <select class="inp op" [value]="draft().op"
+            (change)="setDraft({ op: $any($event.target).value })">
+            @for (op of editOps(); track op) {
+              <option [value]="op" [selected]="draft().op === op">
+                {{ opKey(op) | transloco }}
+              </option>
+            }
+          </select>
+          @switch (col.type) {
+            @case ('bool') {
+              <select class="inp val" [value]="draft().v1"
+                (change)="setDraft({ v1: $any($event.target).value })">
+                <option value="true" [selected]="draft().v1 === 'true'">true</option>
+                <option value="false" [selected]="draft().v1 === 'false'">false</option>
+              </select>
+            }
+            @case ('enum') {
+              <select class="inp val" [value]="draft().v1"
+                (change)="setDraft({ v1: $any($event.target).value })">
+                @for (e of col.enumValues ?? []; track e.value) {
+                  <option [value]="e.value" [selected]="draft().v1 === e.value">{{ e.label }}</option>
+                }
+              </select>
+            }
+            @case ('date') {
+              <input class="inp val" type="date" [value]="draft().v1"
+                (input)="setDraft({ v1: $any($event.target).value })" />
+            }
+            @case ('datetime') {
+              <input class="inp val" type="date" [value]="draft().v1"
+                (input)="setDraft({ v1: $any($event.target).value })" />
+            }
+            @default {
+              <input class="inp val" type="text" [value]="draft().v1"
+                [placeholder]="draft().op === 'range' ? ('filterBar.rangeMin' | transloco) : ''"
+                (input)="setDraft({ v1: $any($event.target).value })"
+                (keydown.enter)="apply()" />
+            }
+          }
+        </div>
+        @if (draft().op === 'range') {
+          <div class="cond-row">
+            <span class="range-sep">〜</span>
+            @if (col.type === 'date' || col.type === 'datetime') {
+              <input class="inp val" type="date" [value]="draft().v2"
+                (input)="setDraft({ v2: $any($event.target).value })" />
+            } @else {
+              <input class="inp val" type="text" [value]="draft().v2"
+                [placeholder]="'filterBar.rangeMax' | transloco"
+                (input)="setDraft({ v2: $any($event.target).value })"
+                (keydown.enter)="apply()" />
+            }
+          </div>
+        }
+        @if (showMultiHint()) {
+          <p class="hint">{{ 'filterBar.multiHint' | transloco }}</p>
+        }
+        @if (invalid()) {
+          <p class="invalid">{{ 'filterBar.invalidValue' | transloco }}</p>
+        }
+        <label class="negate-row">
+          <input type="checkbox" [checked]="draft().negate"
+            (change)="setDraft({ negate: $any($event.target).checked })" />
+          {{ 'filterBar.negate' | transloco }}
+        </label>
+        <div class="cond-foot">
+          <button class="btn" type="button" (click)="close()">{{ 'common.cancel' | transloco }}</button>
+          <button class="btn primary" type="button" (click)="apply()">{{ 'filterBar.apply' | transloco }}</button>
+        </div>
+      }
+    </div>
+  }
+</div>

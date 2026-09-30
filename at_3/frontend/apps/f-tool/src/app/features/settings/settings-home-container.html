@@ -1,0 +1,13 @@
+<tm-home-builder
+  [widgets]="widgets()"
+  [previewWidgets]="previewWidgets()"
+  [requiresOptions]="requiresOptions()"
+  [saving]="saving()"
+  [dirty]="dirty()"
+  [errorMessage]="errorMessage()"
+  [jsonError]="jsonError()"
+  (widgetsChanged)="onWidgetsChanged($event)"
+  (saveClicked)="onSave()"
+  (resetClicked)="onReset()"
+  (jsonApplied)="onJsonApplied($event)"
+/>

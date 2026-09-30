@@ -1,0 +1,7 @@
+<tm-table-select-page
+  [tables]="cards()"
+  [loading]="loading()"
+  [canManage]="canManage()"
+  (tableSelected)="open($event)"
+  (manageClicked)="openManage()"
+/>

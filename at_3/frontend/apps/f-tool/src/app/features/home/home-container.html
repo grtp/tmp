@@ -1,0 +1,7 @@
+@if (widgets(); as ws) {
+  <tm-home-page
+    [widgets]="ws"
+    [emptyText]="'home.noAccess' | transloco"
+    (linkOpened)="open($event)"
+  />
+}

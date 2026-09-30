@@ -1,0 +1,95 @@
+<h2 mat-dialog-title class="head">
+  <span class="head-title">
+    <mat-icon class="ic" aria-hidden="true">lock_person</mat-icon>
+    {{ 'resourceAuthDialog.title' | transloco: { name: title } }}
+  </span>
+  <button class="close" type="button" (click)="close()" [attr.aria-label]="'common.close' | transloco">
+    <mat-icon class="ic" aria-hidden="true">close</mat-icon>
+  </button>
+</h2>
+
+<mat-dialog-content class="body">
+  @if (errorMessage(); as msg) {
+    <p class="error">{{ msg }}</p>
+  }
+  <p class="pane-title">{{ 'resourceAuthDialog.granted' | transloco }}</p>
+  @if (loading()) {
+    <p class="muted">{{ 'common.loading' | transloco }}</p>
+  } @else if (entries().length === 0) {
+    <p class="muted">{{ 'resourceAuthDialog.noGrants' | transloco }}</p>
+  } @else {
+    <ul class="entries">
+      @for (e of entries(); track subjectKey(e)) {
+        <li class="entry">
+          <mat-icon class="ic kind-ic" [class.group]="e.subjectKind === 'group'" aria-hidden="true">
+            {{ e.subjectKind === 'group' ? 'group' : 'person' }}
+          </mat-icon>
+          <span class="subject-name">{{ e.name }}</span>
+          <span class="subject-id mono">{{ e.username ?? '' }}</span>
+          <button
+            class="level-btn"
+            type="button"
+            [class.rw]="e.authLevel === 'rw'"
+            [disabled]="saving()"
+            [attr.title]="'resourceAuthDialog.toggleLevel' | transloco"
+            (click)="toggleLevel(e)"
+          >
+            {{ (e.authLevel === 'rw' ? 'resourceAuthDialog.levelRw' : 'resourceAuthDialog.levelR') | transloco }}
+          </button>
+          <button
+            class="icon-btn danger"
+            type="button"
+            [disabled]="saving()"
+            [attr.aria-label]="'resourceAuthDialog.removeAria' | transloco"
+            [attr.title]="'resourceAuthDialog.removeAria' | transloco"
+            (click)="remove(e)"
+          >
+            <mat-icon class="ic" aria-hidden="true">close</mat-icon>
+          </button>
+        </li>
+      }
+    </ul>
+  }
+
+  <p class="pane-title add-title">{{ 'resourceAuthDialog.addSubject' | transloco }}</p>
+  <div class="kind-switch" role="tablist">
+    <button type="button" class="kind-btn" role="tab"
+      [class.active]="kindFilter() === 'user'" [attr.aria-selected]="kindFilter() === 'user'"
+      (click)="kindFilter.set('user')">
+      <mat-icon class="ic" aria-hidden="true">person</mat-icon>
+      {{ 'resourceAuthDialog.kindUser' | transloco }}
+    </button>
+    <button type="button" class="kind-btn" role="tab"
+      [class.active]="kindFilter() === 'group'" [attr.aria-selected]="kindFilter() === 'group'"
+      (click)="kindFilter.set('group')">
+      <mat-icon class="ic" aria-hidden="true">group</mat-icon>
+      {{ 'resourceAuthDialog.kindGroup' | transloco }}
+    </button>
+  </div>
+  <input
+    class="input search"
+    type="search"
+    [placeholder]="'resourceAuthDialog.searchPlaceholder' | transloco"
+    [value]="search()"
+    (input)="search.set($any($event.target).value)"
+  />
+  <ul class="candidates">
+    @for (s of filteredCandidates(); track subjectKey(s)) {
+      <li>
+        <button class="candidate" type="button" [disabled]="saving()" (click)="add(s)">
+          <span class="subject-name">{{ s.name }}</span>
+          <span class="subject-id mono">{{ s.username ?? '' }}</span>
+          <mat-icon class="ic add-ic" aria-hidden="true">add</mat-icon>
+        </button>
+      </li>
+    } @empty {
+      <li class="muted">{{ 'resourceAuthDialog.noCandidates' | transloco }}</li>
+    }
+  </ul>
+</mat-dialog-content>
+
+<mat-dialog-actions class="foot">
+  <button class="btn" type="button" [disabled]="saving()" (click)="close()">
+    {{ 'common.close' | transloco }}
+  </button>
+</mat-dialog-actions>
