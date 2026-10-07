@@ -1,0 +1,121 @@
+@if (tabs().length > 1) {
+  <div class="tabs-head">
+    <nav mat-tab-nav-bar [tabPanel]="tabPanel" [mat-stretch-tabs]="false" class="tabs">
+      @for (t of tabs(); track t) {
+        <a
+          mat-tab-link
+          tabindex="0"
+          [active]="activeTab() === t"
+          (click)="tabChanged.emit(t)"
+          (keyup.enter)="tabChanged.emit(t)"
+        >
+          <mat-icon class="ic tab-ic" aria-hidden="true">{{ tabIcon(t) }}</mat-icon>
+          {{ tabLabelKey(t) | transloco }}
+        </a>
+      }
+    </nav>
+  </div>
+}
+
+<mat-tab-nav-panel #tabPanel>
+  @switch (activeTab()) {
+    @case ('permissions') {
+      <tm-data-table-page
+        [selectedTable]="'settings.tabPwchangePermissions' | transloco"
+        [columns]="permCols()"
+        [rows]="permRows()"
+        [totalCount]="targets().length"
+        [loading]="loading()"
+        [canCreate]="false"
+        [showCsvExport]="false"
+        storageKey="ftool.colw:pwchange:permissions"
+        (rowSelected)="onPermRowSelected($event)"
+      />
+
+      <ng-template #permNameTpl let-row>
+        @if (isAllRow(row)) {
+          <span class="all-row">
+            <mat-icon class="ic" aria-hidden="true">password</mat-icon>
+            {{ 'settings.allConnectionsRow' | transloco }}
+          </span>
+        } @else if (rowOf(row); as x) {
+          @if (x.connectionColor; as color) {
+            <span class="conn-badge" [title]="x.connectionName"
+              [style.background]="color" [style.color]="contrastTextColor(color)">{{ x.connectionName }}</span>
+          } @else {
+            <span class="conn-badge" [title]="x.connectionName">{{ x.connectionName }}</span>
+          }
+          @if (!x.enabled || !x.saltSet) {
+            <span class="muted"> ({{ 'settings.disabledSuffix' | transloco }})</span>
+          }
+        }
+      </ng-template>
+      <ng-template #permUsersTpl let-row>
+        <span class="perm-count" [class.zero]="authCountOf(row).users === 0">
+          {{ 'settings.grantedUserCount' | transloco: { n: authCountOf(row).users } }}
+        </span>
+      </ng-template>
+      <ng-template #permGroupsTpl let-row>
+        <span class="perm-count" [class.zero]="authCountOf(row).groups === 0">
+          {{ 'settings.grantedGroupCount' | transloco: { n: authCountOf(row).groups } }}
+        </span>
+      </ng-template>
+    }
+
+    @default {
+      <tm-data-table-page
+        [selectedTable]="'pwchangeTargets.title' | transloco"
+        [columns]="cols()"
+        [rows]="rows()"
+        [totalCount]="targets().length"
+        [loading]="loading()"
+        [canCreate]="false"
+        [showCsvExport]="false"
+        storageKey="ftool.colw:pwchange:targets"
+        (rowSelected)="onRowSelected($event)"
+      >
+        <button toolbarActions class="tm-btn primary add-btn" type="button" (click)="addClicked.emit()"
+          [attr.title]="'pwchangeTargets.add' | transloco">
+          <mat-icon class="ic" aria-hidden="true">add</mat-icon>
+          <span class="lbl">{{ 'pwchangeTargets.add' | transloco }}</span>
+        </button>
+      </tm-data-table-page>
+
+      <ng-template #connTpl let-row>
+        @if (rowOf(row); as x) {
+          @if (x.connectionColor; as color) {
+            <span class="conn-badge" [style.background]="color" [style.color]="contrastTextColor(color)">{{ x.connectionName }}</span>
+          } @else {
+            <span class="conn-badge">{{ x.connectionName }}</span>
+          }
+          @if (x.recentFailures >= alertThreshold()) {
+            
+            <span class="warn-badge" [title]="'pwchangeTargets.alertTitle' | transloco: { n: x.recentFailures }">
+              <mat-icon class="ic" aria-hidden="true">warning</mat-icon>{{ x.recentFailures }}
+            </span>
+          }
+        }
+      </ng-template>
+      <ng-template #saltTpl let-row>
+        @if (rowOf(row)?.saltSet) {
+          <span class="status ok">{{ 'pwchangeTargets.saltSet' | transloco }}</span>
+        } @else {
+          <span class="status ng">{{ 'pwchangeTargets.saltUnset' | transloco }}</span>
+        }
+      </ng-template>
+      <ng-template #enabledTpl let-row>
+        <mat-checkbox [checked]="rowOf(row)?.enabled ?? false"
+          (click)="$event.stopPropagation()"
+          (change)="toggled.emit({ id: rowOf(row)!.id, enabled: $event.checked })" />
+      </ng-template>
+      <ng-template #opsTpl let-row>
+        <button mat-icon-button class="icon-btn danger" type="button"
+          (click)="$event.stopPropagation(); deleteClicked.emit(rowOf(row)!.id)"
+          [attr.aria-label]="'settings.deleteAria' | transloco"
+          [attr.title]="'settings.deleteAria' | transloco">
+          <mat-icon class="ic" aria-hidden="true">delete</mat-icon>
+        </button>
+      </ng-template>
+    }
+  }
+</mat-tab-nav-panel>

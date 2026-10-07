@@ -1,0 +1,13 @@
+
+:host {
+  display: contents;
+}
+
+
+.user-name {
+  font-weight: 600;
+}
+.user-id {
+  color: var(--tm-text-muted);
+  font-family: var(--tm-font-mono);
+}

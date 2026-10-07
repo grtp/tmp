@@ -1,0 +1,20 @@
+@if (errorMessage(); as msg) {
+  <p class="error">{{ msg }}</p>
+}
+
+<tm-pwchange-targets-page
+  [targets]="rows()"
+  [loading]="loading()"
+  [alertThreshold]="alertThreshold()"
+  [activeTab]="tab()"
+  [showPermissions]="showPermissions()"
+  [authCounts]="authCounts()"
+  [allAuthCount]="allAuthCount()"
+  (tabChanged)="onTabChanged($event)"
+  (addClicked)="openCreate()"
+  (editClicked)="openEdit($event)"
+  (deleteClicked)="askDelete($event)"
+  (toggled)="onToggled($event)"
+  (permissionClicked)="openAuthDialog($event)"
+  (allPermissionClicked)="openAllAuthDialog()"
+/>
