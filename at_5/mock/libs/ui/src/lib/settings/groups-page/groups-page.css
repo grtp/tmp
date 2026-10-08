@@ -1,0 +1,25 @@
+
+:host {
+  display: contents;
+}
+
+.group-ic {
+  font-size: 1rem;
+  color: var(--tm-primary);
+  vertical-align: middle;
+  margin-right: 0.25rem;
+}
+.group-name {
+  font-weight: 600;
+}
+
+
+.icon-btn {
+  width: 2rem;
+  height: 2rem;
+  padding: 0.25rem;
+  color: var(--tm-text-secondary);
+}
+.icon-btn.danger {
+  color: var(--tm-danger);
+}

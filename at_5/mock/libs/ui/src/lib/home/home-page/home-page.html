@@ -1,0 +1,11 @@
+<div class="wrap">
+  <div class="grid">
+    @for (w of widgets(); track $index) {
+      <section [class]="'w size-' + w.size + ' t-' + w.type">
+        <tm-home-widget [widget]="w" (linkOpened)="linkOpened.emit($event)" />
+      </section>
+    } @empty {
+      <p class="empty">{{ emptyText() }}</p>
+    }
+  </div>
+</div>

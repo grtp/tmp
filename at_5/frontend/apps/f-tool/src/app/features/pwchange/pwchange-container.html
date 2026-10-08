@@ -1,0 +1,15 @@
+<tm-pwchange-page
+  [employeeNo]="employeeNo()"
+  [identity]="identity()"
+  [targets]="targets()"
+  [loading]="loading()"
+  [selectedId]="selectedId()"
+  [lookup]="lookup()"
+  [busy]="busy()"
+  [errorMessage]="errorMessage()"
+  [done]="done()"
+  (targetSelected)="onSelect($event)"
+  (consentClicked)="onConsent()"
+  (changeSubmitted)="onChange($event)"
+  (backClicked)="onBack()"
+/>

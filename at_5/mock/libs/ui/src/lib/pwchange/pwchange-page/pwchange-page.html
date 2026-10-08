@@ -1,0 +1,165 @@
+<div class="wrap">
+  <ol class="steps" aria-label="steps">
+    @for (n of [1, 2, 3, 4]; track n) {
+      <li class="st" [class.on]="step() === n" [class.done]="step() > n">
+        <span class="n">{{ step() > n ? '✓' : n }}</span>
+        {{ 'pwchange.step' + n | transloco }}
+      </li>
+    }
+  </ol>
+
+  @if (errorMessage(); as msg) {
+    <p class="alert err"><mat-icon class="ic" aria-hidden="true">error</mat-icon>{{ msg }}</p>
+  }
+
+  @if (loading()) {
+    
+    <p class="state">{{ 'common.loading' | transloco }}</p>
+  } @else if (!employeeNo()) {
+    
+    <div class="card pane">
+      <p class="alert err"><mat-icon class="ic" aria-hidden="true">badge</mat-icon>{{ 'pwchange.noEmployeeNo' | transloco }}</p>
+      <p class="hint">{{ 'pwchange.noEmployeeNoHint' | transloco }}</p>
+    </div>
+  } @else {
+    @switch (step()) {
+      @case (1) {
+        <p class="alert info">
+          <mat-icon class="ic" aria-hidden="true">badge</mat-icon>
+          <span>{{ 'pwchange.yourEmployeeNo' | transloco }} <b class="mono">{{ employeeNo() }}</b></span>
+        </p>
+        @if (targets().length === 0) {
+          <div class="empty-hero">
+            <mat-icon class="empty-ic" aria-hidden="true">lock_reset</mat-icon>
+            <p class="empty-title">{{ 'pwchange.emptyTitle' | transloco }}</p>
+            <p class="empty-desc">{{ 'pwchange.emptyDesc' | transloco }}</p>
+          </div>
+        } @else {
+          <div class="cards">
+            @for (t of targets(); track t.id) {
+              <button class="card target" type="button" [class.off]="t.locked" [disabled]="t.locked"
+                (click)="select(t)">
+                <span class="name">
+                  <span class="dot" [style.background]="t.color || 'var(--tm-border-strong)'" aria-hidden="true"></span>
+                  {{ t.connectionName }}
+                </span>
+                @if (t.locked) {
+                  <span class="chip warn">{{ 'pwchange.lockedFor' | transloco: { min: lockMinutesLeft(t) } }}</span>
+                } @else if (t.consented) {
+                  <span class="chip ok">{{ 'pwchange.consentedBadge' | transloco }}</span>
+                } @else {
+                  <span class="chip">{{ 'pwchange.firstTimeBadge' | transloco }}</span>
+                }
+              </button>
+            }
+          </div>
+        }
+      }
+
+      @case (2) {
+        @if (selected(); as t) {
+          <div class="card pane confirm">
+            @if (!lookup()) {
+              <p class="state">{{ 'common.loading' | transloco }}</p>
+            } @else if (lookup()!.matched === 1) {
+              <p class="alert warn">
+                <mat-icon class="ic" aria-hidden="true">warning</mat-icon>
+                {{ 'pwchange.confirmQuestion' | transloco }}
+              </p>
+              <dl class="kv">
+                <dt>{{ 'pwchange.connection' | transloco }}</dt>
+                <dd>
+                  <span class="conn-badge" [style.background]="t.color || null"
+                    [style.color]="t.color ? contrastTextColor(t.color) : null">{{ t.connectionName }}</span>
+                </dd>
+                <dt>{{ 'pwchange.employeeNo' | transloco }}</dt>
+                <dd class="mono">{{ employeeNo() }}</dd>
+                <dt>{{ 'pwchange.accountName' | transloco }}</dt>
+                <dd class="big">{{ lookup()!.name }}</dd>
+              </dl>
+              <p class="hint">{{ 'pwchange.consentHint' | transloco }}</p>
+              <div class="actions">
+                <button class="tm-btn" type="button" [disabled]="busy()" (click)="backClicked.emit()">
+                  {{ 'common.back' | transloco }}
+                </button>
+                <button class="tm-btn primary" type="button" [disabled]="busy()" (click)="consentClicked.emit()">
+                  {{ (busy() ? 'common.processing' : 'pwchange.consentButton') | transloco }}
+                </button>
+              </div>
+            } @else {
+              <p class="alert err">
+                <mat-icon class="ic" aria-hidden="true">person_off</mat-icon>
+                {{ (lookup()!.matched === 0 ? 'pwchange.noMatch' : 'pwchange.ambiguous') | transloco }}
+              </p>
+              <p class="hint">{{ 'pwchange.noMatchHint' | transloco }}</p>
+              <div class="actions">
+                <button class="tm-btn" type="button" (click)="backClicked.emit()">{{ 'common.back' | transloco }}</button>
+              </div>
+            }
+          </div>
+        }
+      }
+
+      @case (3) {
+        @if (selected(); as t) {
+          <form class="card pane form" (submit)="$event.preventDefault(); submit()" autocomplete="off">
+            <div class="ctx">
+              <span class="conn-badge" [style.background]="t.color || null"
+                [style.color]="t.color ? contrastTextColor(t.color) : null">{{ t.connectionName }}</span>
+              <mat-icon class="ic" aria-hidden="true">person</mat-icon>
+              <b>{{ lookup()?.name || employeeNo() }}</b>
+              <span class="muted mono">{{ employeeNo() }}</span>
+            </div>
+            <label class="field">
+              <span class="label">{{ 'pwchange.currentPassword' | transloco }} <span class="req">{{ 'common.required' | transloco }}</span></span>
+              <input class="input" [type]="showPw() ? 'text' : 'password'" autocomplete="off" maxlength="512"
+                [value]="current()" (input)="current.set($any($event.target).value)" />
+            </label>
+            <label class="field">
+              <span class="label">{{ 'pwchange.newPassword' | transloco }} <span class="req">{{ 'common.required' | transloco }}</span></span>
+              <input class="input" [type]="showPw() ? 'text' : 'password'" autocomplete="new-password" maxlength="512"
+                [value]="next()" (input)="next.set($any($event.target).value)" />
+            </label>
+            <label class="field">
+              <span class="label">{{ 'pwchange.confirmPassword' | transloco }} <span class="req">{{ 'common.required' | transloco }}</span></span>
+              <input class="input" [type]="showPw() ? 'text' : 'password'" autocomplete="new-password" maxlength="512"
+                [value]="confirm()" (input)="confirm.set($any($event.target).value)" />
+            </label>
+            <label class="show-pw">
+              <input type="checkbox" [checked]="showPw()" (change)="showPw.set($any($event.target).checked)" />
+              {{ 'pwchange.showPassword' | transloco }}
+            </label>
+            <ul class="policy">
+              @for (c of checks(); track c.key) {
+                <li [class.ok]="c.ok">
+                  <mat-icon class="ic" aria-hidden="true">{{ c.ok ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
+                  {{ 'pwchange.rule.' + c.key | transloco: c.params }}
+                </li>
+              }
+            </ul>
+            <p class="hint">{{ 'pwchange.lockHint' | transloco: { n: t.maxFailures, min: t.lockMinutes } }}</p>
+            <div class="actions">
+              <button class="tm-btn" type="button" [disabled]="busy()" (click)="backClicked.emit()">
+                {{ 'common.cancel' | transloco }}
+              </button>
+              <button class="tm-btn primary" type="submit" [disabled]="!canSubmit()">
+                {{ (busy() ? 'common.processing' : 'pwchange.changeButton') | transloco }}
+              </button>
+            </div>
+          </form>
+        }
+      }
+
+      @case (4) {
+        <div class="card pane result">
+          <mat-icon class="big-ic" aria-hidden="true">check_circle</mat-icon>
+          <h3>{{ 'pwchange.doneTitle' | transloco }}</h3>
+          <p class="muted">{{ 'pwchange.doneDesc' | transloco: { conn: selected()?.connectionName ?? '' } }}</p>
+          <div class="actions">
+            <button class="tm-btn" type="button" (click)="restart()">{{ 'pwchange.backToList' | transloco }}</button>
+          </div>
+        </div>
+      }
+    }
+  }
+</div>

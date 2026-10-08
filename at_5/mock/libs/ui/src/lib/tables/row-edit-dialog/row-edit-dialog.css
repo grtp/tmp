@@ -1,0 +1,24 @@
+
+.ro {
+  color: var(--tm-text-muted);
+  font-size: 0.625rem;
+  border: 1px solid currentColor;
+  border-radius: 0.1875rem;
+  padding: 0 0.25rem;
+}
+
+.pk {
+  color: var(--tm-primary);
+  font-size: 0.625rem;
+  font-weight: 600;
+  border: 1px solid currentColor;
+  border-radius: 0.1875rem;
+  padding: 0 0.25rem;
+}
+.pk .ic {
+  font-size: 0.625rem;
+}
+.check {
+  width: 1rem;
+  height: 1rem;
+}

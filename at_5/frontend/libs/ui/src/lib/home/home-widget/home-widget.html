@@ -1,0 +1,98 @@
+@if (hero(); as w) {
+  <div class="hero">
+    <h2 class="hero-title">{{ w.title }}</h2>
+    @if (w.subtitle) {
+      <p class="hero-subtitle">{{ w.subtitle }}</p>
+    }
+    @if (w.links.length > 0) {
+      <div class="hero-links">
+        @for (l of w.links; track $index) {
+          <button class="hero-link" type="button" (click)="linkOpened.emit(l.url)">
+            @if (l.icon) {
+              <mat-icon class="ic" aria-hidden="true">{{ l.icon }}</mat-icon>
+            }
+            <span>{{ l.label }}</span>
+            @if (isExternal(l.url)) {
+              <mat-icon class="ext" aria-hidden="true">open_in_new</mat-icon>
+            }
+          </button>
+        }
+      </div>
+    }
+  </div>
+}
+@if (heading(); as w) {
+  <h2 class="heading">{{ w.text }}</h2>
+}
+@if (plainText(); as w) {
+  <p class="text">{{ w.text }}</p>
+}
+@if (note(); as w) {
+  <div class="note tone-{{ w.tone }}">
+    <mat-icon class="ic" aria-hidden="true">{{ w.tone === 'warn' ? 'warning' : 'info' }}</mat-icon>
+    <span class="note-text">{{ w.text }}</span>
+  </div>
+}
+@if (divider()) {
+  <hr class="divider" />
+}
+@if (rows(); as w) {
+  @if (w.title) {
+    <h3 class="w-title">{{ w.title }}</h3>
+  }
+  <div class="rows">
+    @for (l of w.items; track $index) {
+      <button class="row" type="button" (click)="linkOpened.emit(l.url)">
+        @if (l.icon) {
+          <mat-icon class="ic" aria-hidden="true">{{ l.icon }}</mat-icon>
+        }
+        <span class="row-label">{{ l.label }}</span>
+        @if (l.desc) {
+          <span class="row-desc">{{ l.desc }}</span>
+        }
+        <mat-icon class="ext" aria-hidden="true">{{ isExternal(l.url) ? 'open_in_new' : 'chevron_right' }}</mat-icon>
+      </button>
+    }
+  </div>
+}
+@if (pills(); as w) {
+  @if (w.title) {
+    <h3 class="w-title">{{ w.title }}</h3>
+  }
+  <div class="pills">
+    @for (l of w.items; track $index) {
+      <button class="pill" type="button" (click)="linkOpened.emit(l.url)">
+        @if (l.icon) {
+          <mat-icon class="ic" aria-hidden="true">{{ l.icon }}</mat-icon>
+        }
+        <span>{{ l.label }}</span>
+        @if (isExternal(l.url)) {
+          <mat-icon class="ext" aria-hidden="true">open_in_new</mat-icon>
+        }
+      </button>
+    }
+  </div>
+}
+@if (cards(); as w) {
+  @if (w.title) {
+    <h3 class="w-title">{{ w.title }}</h3>
+  }
+  <div class="cards">
+    @for (l of w.items; track $index) {
+      <button class="entry" type="button" (click)="linkOpened.emit(l.url)">
+        @if (l.icon) {
+          <mat-icon class="ic" aria-hidden="true">{{ l.icon }}</mat-icon>
+        }
+        <span class="entry-body">
+          <span class="name">{{ l.label }}</span>
+          @if (l.desc) {
+            <span class="entry-desc">{{ l.desc }}</span>
+          }
+        </span>
+        @if (isExternal(l.url)) {
+          <mat-icon class="ext" aria-hidden="true">open_in_new</mat-icon>
+        }
+      </button>
+    }
+  </div>
+}

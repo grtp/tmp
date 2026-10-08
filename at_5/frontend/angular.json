@@ -1,0 +1,75 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "newProjectRoot": "apps",
+  "cli": {
+    "analytics": false,
+    "packageManager": "npm"
+  },
+  "projects": {
+    "f-tool": {
+      "projectType": "application",
+      "root": "apps/f-tool",
+      "sourceRoot": "apps/f-tool/src",
+      "prefix": "tm",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:application",
+          "options": {
+            "outputPath": "dist/apps/f-tool",
+            "browser": "apps/f-tool/src/main.ts",
+            "tsConfig": "apps/f-tool/tsconfig.app.json",
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "apps/f-tool/public"
+              }
+            ],
+            "styles": [
+              "libs/ui/src/styles/material-theme.scss",
+              "apps/f-tool/src/styles.css"
+            ]
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "1mb",
+                  "maximumError": "2mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "10kb",
+                  "maximumError": "20kb"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular/build:dev-server",
+          "options": {
+            "proxyConfig": "apps/f-tool/proxy.conf.json"
+          },
+          "configurations": {
+            "production": {
+              "buildTarget": "f-tool:build:production"
+            },
+            "development": {
+              "buildTarget": "f-tool:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        }
+      }
+    }
+  }
+}

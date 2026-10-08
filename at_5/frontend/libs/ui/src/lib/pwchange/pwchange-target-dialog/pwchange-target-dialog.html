@@ -1,0 +1,315 @@
+
+<h2 mat-dialog-title class="head">
+  <span class="head-title">
+    <mat-icon class="ic" aria-hidden="true">lock_reset</mat-icon>
+    {{ (mode === 'create' ? 'pwchangeTargetDialog.createTitle' : 'pwchangeTargetDialog.editTitle') | transloco }}
+  </span>
+  <button class="close" type="button" (click)="cancel()" [attr.aria-label]="'common.close' | transloco">
+    <mat-icon class="ic" aria-hidden="true">close</mat-icon>
+  </button>
+</h2>
+
+<mat-dialog-content class="body">
+  @if (errorMessage(); as msg) {
+    <p class="error">{{ msg }}</p>
+  }
+
+  
+  <section class="sec">
+    <p class="sec-title"><span class="no">1</span>{{ 'pwchangeTargetDialog.secTable' | transloco }}</p>
+    @if (mode === 'edit') {
+      <p class="edit-target">
+        <span class="label">{{ 'pwchangeTargetDialog.target' | transloco }}</span>
+        <span class="mono"><span class="conn-badge">{{ value?.connectionName }}</span>{{ value?.schemaName }}.{{ value?.tableName }}</span>
+      </p>
+    } @else {
+      <div class="row2">
+        <label class="field">
+          <span class="label">{{ 'pwchangeTargetDialog.connection' | transloco }} <span class="req">{{ 'common.required' | transloco }}</span></span>
+          <select class="input" [value]="connectionId() === null ? '' : connectionId()" (change)="onConnChange($any($event.target).value)">
+            <option value="">{{ 'pwchangeTargetDialog.selectPrompt' | transloco }}</option>
+            @for (c of connections; track c.id) {
+              <option [value]="c.id" [selected]="c.id === connectionId()">{{ c.name }}</option>
+            }
+          </select>
+        </label>
+        <label class="field">
+          <span class="label">{{ 'pwchangeTargetDialog.table' | transloco }} <span class="req">{{ 'common.required' | transloco }}</span></span>
+          <select class="input mono" [disabled]="connectionId() === null || loading()"
+            [value]="table() ? tableKey(table()!) : ''" (change)="onTableChange($any($event.target).value)">
+            <option value="">{{ (loading() ? 'common.loading' : 'pwchangeTargetDialog.selectPrompt') | transloco }}</option>
+            @for (c of candidates(); track tableKey(c)) {
+              <option [value]="tableKey(c)" [selected]="table() !== null && tableKey(c) === tableKey(table()!)">{{ tableKey(c) }}</option>
+            }
+          </select>
+        </label>
+      </div>
+    }
+    <div class="row2">
+      <label class="field">
+        <span class="label">{{ 'pwchangeTargetDialog.idColumn' | transloco }} <span class="req">{{ 'common.required' | transloco }}</span></span>
+        <select class="input mono" [disabled]="!columns()" [value]="idColumn()" (change)="idColumn.set($any($event.target).value)">
+          <option value="">{{ (table() && !columns() ? 'common.loading' : 'pwchangeTargetDialog.selectPrompt') | transloco }}</option>
+          @for (c of columnOptions(); track c.name) {
+            <option [value]="c.name" [selected]="c.name === idColumn()">{{ colLabel(c) }}</option>
+          }
+        </select>
+        <span class="hint">{{ 'pwchangeTargetDialog.idColumnHint' | transloco }}</span>
+      </label>
+      <label class="field">
+        <span class="label">{{ 'pwchangeTargetDialog.passwordColumn' | transloco }} <span class="req">{{ 'common.required' | transloco }}</span></span>
+        <select class="input mono" [disabled]="!columns()" [value]="passwordColumn()" (change)="passwordColumn.set($any($event.target).value)">
+          <option value="">{{ 'pwchangeTargetDialog.selectPrompt' | transloco }}</option>
+          @for (c of columnOptions(); track c.name) {
+            <option [value]="c.name" [selected]="c.name === passwordColumn()">{{ colLabel(c) }}</option>
+          }
+        </select>
+        <span class="hint">{{ 'pwchangeTargetDialog.passwordColumnHint' | transloco }}</span>
+      </label>
+    </div>
+    <label class="field">
+      <span class="label">{{ 'pwchangeTargetDialog.nameColumn' | transloco }}</span>
+      <select class="input mono" [disabled]="!columns()" [value]="nameColumn()" (change)="nameColumn.set($any($event.target).value)">
+        <option value="">{{ 'pwchangeTargetDialog.nameColumnNone' | transloco }}</option>
+        @for (c of columnOptions(); track c.name) {
+          <option [value]="c.name" [selected]="c.name === nameColumn()">{{ colLabel(c) }}</option>
+        }
+      </select>
+    </label>
+    <div class="field">
+      <span class="label">{{ 'pwchangeTargetDialog.fixedColumns' | transloco }} <span class="hint">{{ 'pwchangeTargetDialog.fixedColumnsHint' | transloco }}</span></span>
+      <div class="fixed-list">
+        @for (f of fixed(); track $index) {
+          <div class="fixed-row">
+            <select class="input mono" [value]="f.name" (change)="setFixed($index, { name: $any($event.target).value })">
+              <option value="">{{ 'pwchangeTargetDialog.selectPrompt' | transloco }}</option>
+              @for (c of fixedCandidates(f.name); track c.name) {
+                <option [value]="c.name" [selected]="c.name === f.name">{{ colLabel(c) }}</option>
+              }
+            </select>
+            <select class="input" [value]="f.kind" (change)="setFixed($index, { kind: $any($event.target).value })">
+              <option value="literal" [selected]="f.kind === 'literal'">{{ 'managedTableDialog.fixedKindLiteral' | transloco }}</option>
+              @if (canUseNow(f.name)) {
+                <option value="now" [selected]="f.kind === 'now'">{{ 'managedTableDialog.fixedKindNow' | transloco }}</option>
+              }
+            </select>
+            @if (f.kind === 'literal') {
+              <input class="input mono" type="text" maxlength="400" [value]="f.value ?? ''"
+                [placeholder]="'managedTableDialog.fixedValuePlaceholder' | transloco"
+                (input)="setFixed($index, { value: $any($event.target).value })" />
+            } @else {
+              <span class="muted">—</span>
+            }
+            <button class="btn small" type="button" (click)="removeFixed($index)">{{ 'common.delete' | transloco }}</button>
+          </div>
+        }
+      </div>
+      <div>
+        <button class="btn small" type="button" [disabled]="!columns()" (click)="addFixed()">
+          <mat-icon class="ic" aria-hidden="true">add</mat-icon>{{ 'pwchangeTargetDialog.addFixed' | transloco }}
+        </button>
+      </div>
+    </div>
+  </section>
+
+  
+  <section class="sec">
+    <p class="sec-title"><span class="no">2</span>{{ 'pwchangeTargetDialog.secRecipe' | transloco }}</p>
+    <div class="row3">
+      <label class="field">
+        <span class="label">{{ 'pwchangeTargetDialog.algorithm' | transloco }}</span>
+        <select class="input" [value]="algorithm()" (change)="algorithm.set($any($event.target).value)">
+          <option value="sha256">SHA-256</option>
+          <option value="sha512">SHA-512</option>
+          <option value="sha1">SHA-1</option>
+          <option value="md5">MD5</option>
+        </select>
+      </label>
+      <label class="field">
+        <span class="label">{{ 'pwchangeTargetDialog.encoding' | transloco }}</span>
+        <select class="input" [value]="encoding()" (change)="encoding.set($any($event.target).value)">
+          <option value="utf8">UTF-8</option>
+          <option value="utf16le">UTF-16LE</option>
+          <option value="sjis">Shift_JIS</option>
+        </select>
+      </label>
+      <label class="field">
+        <span class="label">{{ 'pwchangeTargetDialog.iterations' | transloco }}</span>
+        <input class="input mono" type="number" min="1" max="100000" [value]="iterations()"
+          (input)="iterations.set(num($any($event.target).value, 1))" />
+      </label>
+    </div>
+    <label class="field">
+      <span class="label">{{ 'pwchangeTargetDialog.template' | transloco }} <span class="req">{{ 'common.required' | transloco }}</span></span>
+      <div class="tpl">
+        <input class="input mono" type="text" maxlength="200" [class.invalid]="templateError() !== null"
+          [value]="template()" (input)="template.set($any($event.target).value)" />
+        <span class="chip mono">$input</span><span class="chip mono">$salt</span><span class="chip mono">$$</span>
+      </div>
+      @if (templateError(); as err) {
+        <span class="field-err">{{ 'pwchangeTargetDialog.' + (err === 'noInput' ? 'templateNoInput' : 'templateBadToken') | transloco }}</span>
+      } @else {
+        <span class="hint">{{ 'pwchangeTargetDialog.templateHint' | transloco }}</span>
+      }
+    </label>
+    <div class="row2">
+      <label class="field">
+        <span class="label">{{ 'pwchangeTargetDialog.output' | transloco }}</span>
+        <select class="input" [value]="output()" (change)="output.set($any($event.target).value)">
+          <option value="hex">{{ 'pwchangeTargetDialog.outHex' | transloco }}</option>
+          <option value="hexupper">{{ 'pwchangeTargetDialog.outHexUpper' | transloco }}</option>
+          <option value="base64">Base64</option>
+          <option value="binary">{{ 'pwchangeTargetDialog.outBinary' | transloco }}</option>
+        </select>
+      </label>
+      <div class="field">
+        <span class="label">{{ 'pwchangeTargetDialog.lengthCheck' | transloco }}</span>
+        <div class="preview">
+          <span><b>{{ 'pwchangeTargetDialog.outputLength' | transloco }}</b> {{ encodedLength() }}</span>
+          @if (passwordColumnMeta(); as c) {
+            <span><b>{{ 'pwchangeTargetDialog.columnType' | transloco }}</b> <span class="mono">{{ colLabel(c) }}</span></span>
+          } @else {
+            <span class="muted">{{ 'pwchangeTargetDialog.selectPasswordColumnFirst' | transloco }}</span>
+          }
+        </div>
+      </div>
+    </div>
+    @if (outputMismatch(); as m) {
+      <p class="mode-warn"><mat-icon class="ic" aria-hidden="true">error</mat-icon>
+        {{ 'pwchangeTargetDialog.' + (m === 'needBinary' ? 'needBinary' : 'needText') | transloco }}</p>
+    } @else if (tooLong()) {
+      <p class="mode-warn"><mat-icon class="ic" aria-hidden="true">error</mat-icon>{{ 'pwchangeTargetDialog.tooLong' | transloco }}</p>
+    }
+    @if (weakAlgorithm()) {
+      <p class="mode-warn"><mat-icon class="ic" aria-hidden="true">warning</mat-icon>{{ 'pwchangeTargetDialog.weakAlgorithm' | transloco }}</p>
+    }
+  </section>
+
+  
+  <section class="sec">
+    <p class="sec-title"><span class="no">3</span>{{ 'pwchangeTargetDialog.secSalt' | transloco }}</p>
+    <div class="row2">
+      <div class="field">
+        <span class="label">{{ 'pwchangeTargetDialog.saltStatus' | transloco }}</span>
+        <div class="preview">
+          @if (value?.saltSet) {
+            <span><span class="status ok">{{ 'pwchangeTargets.saltSet' | transloco }}</span>
+              @if (value?.saltSetBy) { <span class="muted">{{ value?.saltSetAt }} / {{ value?.saltSetBy }}</span> }
+            </span>
+            <span class="muted">{{ 'pwchangeTargetDialog.saltHidden' | transloco }}</span>
+          } @else {
+            <span><span class="status ng">{{ 'pwchangeTargets.saltUnset' | transloco }}</span></span>
+            <span class="muted">{{ 'pwchangeTargetDialog.saltUnsetHint' | transloco }}</span>
+          }
+        </div>
+      </div>
+      <label class="field">
+        <span class="label">{{ (value?.saltSet ? 'pwchangeTargetDialog.newSalt' : 'pwchangeTargetDialog.salt') | transloco }}</span>
+        <input class="input mono" type="password" autocomplete="new-password" maxlength="256" [value]="salt()"
+          [placeholder]="(value?.saltSet ? 'pwchangeTargetDialog.saltKeep' : '') | transloco"
+          (input)="salt.set($any($event.target).value)" />
+        @if (value?.saltSet) {
+          <span class="hint warn">{{ 'pwchangeTargetDialog.saltChangeWarn' | transloco }}</span>
+        }
+      </label>
+    </div>
+  </section>
+
+  
+  <section class="sec">
+    <p class="sec-title"><span class="no">4</span>{{ 'pwchangeTargetDialog.secLock' | transloco }}</p>
+    <div class="row2">
+      <label class="field">
+        <span class="label">{{ 'pwchangeTargetDialog.maxFailures' | transloco }}</span>
+        <input class="input mono" type="number" min="1" max="100" [value]="maxFailures()"
+          (input)="maxFailures.set(num($any($event.target).value, 5))" />
+      </label>
+      <label class="field">
+        <span class="label">{{ 'pwchangeTargetDialog.lockMinutes' | transloco }}</span>
+        <input class="input mono" type="number" min="1" max="1440" [value]="lockMinutes()"
+          (input)="lockMinutes.set(num($any($event.target).value, 15))" />
+      </label>
+    </div>
+    <p class="hint">{{ 'pwchangeTargetDialog.lockHint' | transloco }}</p>
+  </section>
+
+  
+  <section class="sec">
+    <p class="sec-title"><span class="no">5</span>{{ 'pwchangeTargetDialog.secPolicy' | transloco }}</p>
+    <div class="row3">
+      <label class="field">
+        <span class="label">{{ 'pwchangeTargetDialog.minLen' | transloco }}</span>
+        <input class="input mono" type="number" min="1" max="512" [value]="policy().minLen"
+          (input)="setPolicy({ minLen: num($any($event.target).value, 8) })" />
+      </label>
+      <label class="field">
+        <span class="label">{{ 'pwchangeTargetDialog.maxLen' | transloco }}</span>
+        <input class="input mono" type="number" min="1" max="512" [value]="policy().maxLen"
+          (input)="setPolicy({ maxLen: num($any($event.target).value, 64) })" />
+      </label>
+      <label class="field">
+        <span class="label">{{ 'pwchangeTargetDialog.minClasses' | transloco }}</span>
+        <select class="input" [value]="policy().minClasses" (change)="setPolicy({ minClasses: num($any($event.target).value, 2) })">
+          <option value="0" [selected]="policy().minClasses === 0">{{ 'pwchangeTargetDialog.classesNone' | transloco }}</option>
+          @for (n of [1, 2, 3, 4]; track n) {
+            <option [value]="n" [selected]="policy().minClasses === n">{{ 'pwchangeTargetDialog.classesN' | transloco: { n } }}</option>
+          }
+        </select>
+      </label>
+    </div>
+    <div class="checks">
+      <label class="chk"><input type="checkbox" [checked]="policy().asciiOnly" (change)="setPolicy({ asciiOnly: $any($event.target).checked })" />{{ 'pwchangeTargetDialog.asciiOnly' | transloco }}</label>
+      <label class="chk"><input type="checkbox" [checked]="policy().forbidSame" (change)="setPolicy({ forbidSame: $any($event.target).checked })" />{{ 'pwchangeTargetDialog.forbidSame' | transloco }}</label>
+      <label class="chk"><input type="checkbox" [checked]="policy().forbidIdentity" (change)="setPolicy({ forbidIdentity: $any($event.target).checked })" />{{ 'pwchangeTargetDialog.forbidIdentity' | transloco }}</label>
+    </div>
+  </section>
+
+  
+  <section class="sec">
+    <p class="sec-title"><span class="no">6</span>{{ 'pwchangeTargetDialog.secTest' | transloco }}</p>
+    <label class="field">
+      <span class="label">{{ 'pwchangeTargetDialog.testAccountId' | transloco }}</span>
+      <input class="input mono" type="text" maxlength="64" [value]="testAccountId()"
+        (input)="testAccountId.set($any($event.target).value)" />
+      <span class="hint">{{ 'pwchangeTargetDialog.testAccountIdHint' | transloco }}</span>
+    </label>
+    @if (mode === 'create') {
+      <p class="hint">{{ 'pwchangeTargetDialog.testAfterSave' | transloco }}</p>
+    } @else if (!value?.saltSet) {
+      <p class="hint">{{ 'pwchangeTargetDialog.testNeedsSalt' | transloco }}</p>
+    } @else {
+      <div class="test">
+        <label class="field">
+          <span class="label">{{ 'pwchangeTargetDialog.testAccount' | transloco }}</span>
+          <select class="input" [value]="testAccount()" (change)="testAccount.set($any($event.target).value)">
+            <option value="self" [disabled]="!selfEmployeeNo">{{ 'pwchangeTargetDialog.testSelf' | transloco: { no: selfEmployeeNo ?? '-' } }}</option>
+            <option value="test" [disabled]="testAccountId().trim() === ''">{{ 'pwchangeTargetDialog.testDummy' | transloco: { id: (value?.testAccountId || testAccountId()) || '-' } }}</option>
+          </select>
+        </label>
+        <label class="field">
+          <span class="label">{{ 'pwchange.currentPassword' | transloco }}</span>
+          <input class="input" type="password" autocomplete="off" maxlength="512" [value]="testPassword()"
+            (input)="testPassword.set($any($event.target).value)" />
+        </label>
+        <button class="btn" type="button" [disabled]="!canTest()" (click)="test()">
+          {{ (testing() ? 'pwchangeTargetDialog.testing' : 'pwchangeTargetDialog.testButton') | transloco }}
+        </button>
+      </div>
+      <span class="hint">{{ 'pwchangeTargetDialog.testSavedHint' | transloco }}</span>
+      @if (testResult(); as r) {
+        <p class="test-result" [class.ng]="!r.ok">{{ r.text }}</p>
+      }
+    }
+  </section>
+</mat-dialog-content>
+
+<mat-dialog-actions class="foot">
+  <button class="btn" type="button" [disabled]="saving()" (click)="cancel()">{{ 'common.cancel' | transloco }}</button>
+  <button class="btn primary" type="button" [disabled]="!canConfirm()" (click)="confirm()">
+    @if (mode === 'edit') {
+      {{ (saving() ? 'common.saving' : 'common.save') | transloco }}
+    } @else {
+      {{ (saving() ? 'managedTableDialog.registering' : 'managedTableDialog.register') | transloco }}
+    }
+  </button>
+</mat-dialog-actions>
