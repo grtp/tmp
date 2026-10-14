@@ -1,0 +1,33 @@
+<tm-data-table-page
+  [selectedTable]="title()"
+  [columns]="columnDefs()"
+  [rows]="displayRows()"
+  [totalCount]="groups().length"
+  [loading]="loading()"
+  [canCreate]="false"
+  [showMultiSelect]="false"
+  [showCsvExport]="false"
+  storageKey="ftool.colw:settings:groups"
+  (rowSelected)="onRowSelected($event)"
+>
+  <button toolbarActions class="tm-btn primary add-btn" type="button"
+    [attr.title]="'settings.addGroup' | transloco"
+    (click)="addClicked.emit()">
+    <mat-icon class="ic" aria-hidden="true">add</mat-icon>
+    <span class="lbl">{{ 'settings.addGroup' | transloco }}</span>
+  </button>
+</tm-data-table-page>
+
+<ng-template #nameTpl let-row>
+  <mat-icon class="ic group-ic" aria-hidden="true">group</mat-icon>
+  <span class="group-name">{{ rowOf(row)?.name }}</span>
+</ng-template>
+
+<ng-template #opsTpl let-row>
+  <button mat-icon-button class="icon-btn danger" type="button"
+    (click)="$event.stopPropagation(); deleteClicked.emit(rowOf(row)!.id)"
+    [attr.aria-label]="'settings.deleteAria' | transloco"
+    [attr.title]="'settings.deleteAria' | transloco">
+    <mat-icon class="ic" aria-hidden="true">delete</mat-icon>
+  </button>
+</ng-template>

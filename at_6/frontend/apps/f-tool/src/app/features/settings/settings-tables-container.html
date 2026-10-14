@@ -1,0 +1,25 @@
+@if (errorMessage(); as msg) {
+  <p class="error">{{ msg }}</p>
+}
+
+<tm-settings-page
+  [activeTab]="tab()"
+  [visibleTabs]="visibleTabs()"
+  [managedTables]="settingsTables()"
+  [connections]="settingsConnections()"
+  [loading]="loading()"
+  [tableAuthCounts]="tableAuthCounts()"
+  [allTablesAuthCount]="allTablesAuthCount()"
+  (tabChanged)="onTabChanged($event)"
+  (registerClicked)="openRegister()"
+  (tableEditClicked)="openTableEdit($event)"
+  (tableToggled)="onTableToggled($event)"
+  (tableDeleteClicked)="askTableDelete($event)"
+  (tablePermissionClicked)="openTableAuthDialog($event)"
+  (allTablesPermissionClicked)="openAllTablesAuthDialog()"
+  (connectionAddClicked)="openConnectionCreate()"
+  (connectionEditClicked)="openConnectionEdit($event)"
+  (connectionToggled)="onConnectionToggled($event)"
+  (connectionDeleteClicked)="askConnectionDelete($event)"
+  (connectionTestClicked)="onConnectionTest($event)"
+/>

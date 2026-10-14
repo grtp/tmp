@@ -1,0 +1,64 @@
+<div class="page">
+  <div class="card">
+    
+    <h1 class="title" [attr.title]="version() ? 'ver: ' + version() : null">{{ systemName() }}</h1>
+
+    @if (errorMessage(); as msg) {
+      <p class="error" role="alert">
+        <mat-icon class="ic" aria-hidden="true">error</mat-icon> {{ msg }}
+      </p>
+    }
+
+    <mat-form-field class="field" appearance="outline" subscriptSizing="dynamic">
+      <mat-label>{{ 'login.userId' | transloco }}</mat-label>
+      <input
+        matInput
+        id="tm-login-user"
+        type="text"
+        autocomplete="username"
+        placeholder="userid"
+        [value]="userId()"
+        [disabled]="loading()"
+        (input)="userId.set($any($event.target).value)"
+      />
+    </mat-form-field>
+
+    <mat-form-field class="field" appearance="outline" subscriptSizing="dynamic">
+      <mat-label>{{ 'login.password' | transloco }}</mat-label>
+      <input
+        matInput
+        id="tm-login-pass"
+        type="password"
+        autocomplete="current-password"
+        placeholder="••••••••"
+        [value]="password()"
+        [disabled]="loading()"
+        (input)="password.set($any($event.target).value)"
+        (keydown.enter)="onSubmit()"
+      />
+    </mat-form-field>
+
+    <button
+      mat-flat-button
+      class="submit"
+      type="button"
+      [disabled]="loading() || !canSubmit()"
+      (click)="onSubmit()"
+    >
+      @if (loading()) {
+        {{ 'login.authenticating' | transloco }}
+      } @else {
+        {{ 'login.submit' | transloco }}
+      }
+    </button>
+
+    <p class="note">
+      <mat-icon class="ic" aria-hidden="true">lock</mat-icon> {{ 'login.adNote' | transloco }}
+    </p>
+
+    <div class="langs">
+      <tm-lang-select />
+    </div>
+  </div>
+</div>
+

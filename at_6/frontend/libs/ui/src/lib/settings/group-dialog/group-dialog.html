@@ -1,0 +1,105 @@
+<h2 mat-dialog-title class="head">
+  <span class="head-title">
+    <mat-icon class="ic" aria-hidden="true">group</mat-icon>
+    {{ (mode === 'create' ? 'groupDialog.createTitle' : 'groupDialog.editTitle') | transloco }}
+  </span>
+  <button class="close" type="button" (click)="cancel()" [attr.aria-label]="'common.close' | transloco">
+    <mat-icon class="ic" aria-hidden="true">close</mat-icon>
+  </button>
+</h2>
+
+<mat-dialog-content class="body">
+  @if (errorMessage(); as msg) {
+    <p class="error">{{ msg }}</p>
+  }
+
+  <label class="field">
+    <span class="label">{{ 'groupDialog.name' | transloco }} <span class="req">{{ 'common.required' | transloco }}</span></span>
+    <input class="input" type="text" maxlength="128" [value]="name()"
+      (input)="name.set($any($event.target).value)" />
+  </label>
+  <label class="field">
+    <span class="label">{{ 'groupDialog.description' | transloco }}</span>
+    <input class="input" type="text" maxlength="400" [value]="description()"
+      (input)="description.set($any($event.target).value)" />
+  </label>
+
+  @if (mode === 'create') {
+    <p class="hint">{{ 'groupDialog.createHint' | transloco }}</p>
+  } @else {
+    <p class="pane-title members-title">{{ 'groupDialog.members' | transloco }}</p>
+    @if (loadingMembers()) {
+      <p class="muted">{{ 'common.loading' | transloco }}</p>
+    } @else if (members().length === 0) {
+      <p class="muted">{{ 'groupDialog.noMembers' | transloco }}</p>
+    } @else {
+      <ul class="entries">
+        @for (m of members(); track subjectKey(m)) {
+          <li class="entry">
+            <mat-icon class="ic kind-ic" [class.group]="m.subjectKind === 'group'" aria-hidden="true">
+              {{ m.subjectKind === 'group' ? 'group' : 'person' }}
+            </mat-icon>
+            <span class="subject-name">{{ m.name }}</span>
+            <span class="subject-id mono">{{ m.username ?? '' }}</span>
+            <button
+              class="icon-btn danger"
+              type="button"
+              [disabled]="saving()"
+              [attr.aria-label]="'groupDialog.removeAria' | transloco"
+              [attr.title]="'groupDialog.removeAria' | transloco"
+              (click)="remove(m)"
+            >
+              <mat-icon class="ic" aria-hidden="true">close</mat-icon>
+            </button>
+          </li>
+        }
+      </ul>
+    }
+
+    <p class="pane-title add-title">{{ 'groupDialog.addMember' | transloco }}</p>
+    <div class="kind-switch" role="tablist">
+      <button type="button" class="kind-btn" role="tab"
+        [class.active]="kindFilter() === 'user'" [attr.aria-selected]="kindFilter() === 'user'"
+        (click)="kindFilter.set('user')">
+        <mat-icon class="ic" aria-hidden="true">person</mat-icon>
+        {{ 'resourceAuthDialog.kindUser' | transloco }}
+      </button>
+      <button type="button" class="kind-btn" role="tab"
+        [class.active]="kindFilter() === 'group'" [attr.aria-selected]="kindFilter() === 'group'"
+        (click)="kindFilter.set('group')">
+        <mat-icon class="ic" aria-hidden="true">group</mat-icon>
+        {{ 'resourceAuthDialog.kindGroup' | transloco }}
+      </button>
+    </div>
+    <input
+      class="input search"
+      type="search"
+      [placeholder]="'resourceAuthDialog.searchPlaceholder' | transloco"
+      [value]="search()"
+      (input)="search.set($any($event.target).value)"
+    />
+    <ul class="candidates">
+      @for (s of filteredCandidates(); track subjectKey(s)) {
+        <li>
+          <button class="candidate" type="button" [disabled]="saving()" (click)="add(s)">
+            <span class="subject-name">{{ s.name }}</span>
+            <span class="subject-id mono">{{ s.username ?? '' }}</span>
+            <mat-icon class="ic add-ic" aria-hidden="true">add</mat-icon>
+          </button>
+        </li>
+      } @empty {
+        <li class="muted">{{ 'resourceAuthDialog.noCandidates' | transloco }}</li>
+      }
+    </ul>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions class="foot">
+  <span class="spacer"></span>
+  <button class="btn" type="button" [disabled]="saving()" (click)="cancel()">
+    {{ 'common.cancel' | transloco }}
+  </button>
+  <button class="btn primary" type="button" [disabled]="saving() || !canSave()" (click)="save()">
+    {{ (saving() ? 'common.saving' : 'common.save') | transloco }}
+  </button>
+</mat-dialog-actions>

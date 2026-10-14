@@ -1,0 +1,46 @@
+
+:host {
+  display: contents;
+}
+
+
+.toolbar-extra {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--tm-text-secondary);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.group-ic {
+  font-size: 1rem;
+  color: var(--tm-primary);
+  vertical-align: middle;
+  margin-right: 0.25rem;
+}
+.group-name {
+  font-weight: 600;
+}
+.group-desc {
+  color: var(--tm-text-muted);
+  font-size: 0.6875rem;
+}
+
+
+.icon-btn {
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  color: var(--tm-text-secondary);
+}
+.icon-btn.danger:hover {
+  color: var(--tm-danger);
+  background: var(--tm-danger-bg);
+}

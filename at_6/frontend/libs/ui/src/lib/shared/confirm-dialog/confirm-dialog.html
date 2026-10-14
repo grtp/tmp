@@ -1,0 +1,29 @@
+<h2 mat-dialog-title class="head">
+  <mat-icon class="icon ic" [class.danger]="data.danger" aria-hidden="true">
+    {{ data.danger ? 'warning' : 'help' }}
+  </mat-icon>
+  {{ data.title }}
+</h2>
+<mat-dialog-content>
+  <p class="message">{{ data.message }}</p>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button class="tm-btn" type="button" [disabled]="busy()" (click)="cancel()">
+    {{ 'common.cancel' | transloco }}
+  </button>
+  <button
+    type="button"
+    class="tm-btn primary confirm-btn"
+    [class.danger]="data.danger"
+    [disabled]="busy()"
+    (click)="confirmed.emit()"
+  >
+    @if (busy()) {
+      {{ 'common.processing' | transloco }}
+    } @else if (data.confirmLabel) {
+      {{ data.confirmLabel }}
+    } @else {
+      {{ 'common.execute' | transloco }}
+    }
+  </button>
+</mat-dialog-actions>
