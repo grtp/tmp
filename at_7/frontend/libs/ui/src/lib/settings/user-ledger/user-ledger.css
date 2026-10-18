@@ -1,0 +1,24 @@
+
+:host {
+  display: contents;
+}
+
+
+.user-name {
+  font-weight: 600;
+}
+.user-id {
+  color: var(--tm-text-muted);
+  font-family: var(--tm-font-mono);
+}
+
+.icon-btn {
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  color: var(--tm-text-secondary);
+}
+.icon-btn.danger:hover {
+  color: var(--tm-danger);
+  background: var(--tm-danger-bg);
+}

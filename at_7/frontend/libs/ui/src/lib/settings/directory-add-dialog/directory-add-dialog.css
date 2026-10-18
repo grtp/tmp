@@ -1,0 +1,119 @@
+
+.body {
+  gap: 0.375rem;
+  max-height: 60vh;
+}
+.hint {
+  margin: 0 0 0.25rem;
+  font-size: 0.75rem;
+  color: var(--tm-text-muted);
+}
+.truncated {
+  margin-left: 0.5rem;
+  color: var(--tm-danger);
+}
+.search-row {
+  display: flex;
+  gap: 0.375rem;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+.input.search {
+  height: 2rem;
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.search-row .tm-btn {
+  flex: none;
+  white-space: nowrap;
+}
+.candidates {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  max-height: 16rem;
+  overflow-y: auto;
+  border: 1px solid var(--tm-border);
+  border-radius: var(--tm-radius);
+}
+.candidates:has(> .empty) {
+  border: none;
+}
+.candidates .empty {
+  padding: 0.375rem 0;
+}
+.candidate {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: var(--tm-radius);
+  padding: 0.375rem 0.5rem;
+  font-family: inherit;
+  cursor: pointer;
+  color: var(--tm-text);
+}
+.candidate:hover:not(:disabled) {
+  background: var(--tm-primary-tint-weak);
+}
+.candidate.selected {
+  background: var(--tm-primary-tint);
+}
+
+.candidate:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.kind-ic {
+  font-size: 1rem;
+  color: var(--tm-text-muted);
+}
+.subject-name {
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+.subject-id {
+  font-size: 0.75rem;
+  color: var(--tm-text-muted);
+  font-family: var(--tm-font-mono);
+  white-space: nowrap;
+}
+.subject-dept {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.6875rem;
+  color: var(--tm-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.badge {
+  font-size: 0.6875rem;
+  color: var(--tm-text-muted);
+  border: 1px solid var(--tm-border);
+  border-radius: 999px;
+  padding: 0 0.375rem;
+  white-space: nowrap;
+}
+.check-ic {
+  color: var(--tm-primary);
+}
+.muted {
+  color: var(--tm-text-muted);
+  font-size: 0.75rem;
+  margin: 0;
+}
+.selected-hint {
+  font-size: 0.75rem;
+  color: var(--tm-text-secondary);
+}
+.spacer {
+  flex: 1;
+}

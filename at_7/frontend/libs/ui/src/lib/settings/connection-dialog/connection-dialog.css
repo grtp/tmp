@@ -1,0 +1,23 @@
+
+.test {
+  margin: 0;
+  padding: 0.5rem 0.625rem;
+  background: var(--tm-primary-tint-weak);
+  color: var(--tm-primary);
+  border-radius: var(--tm-radius);
+  font-size: 0.75rem;
+}
+.test.ng {
+  background: var(--tm-danger-bg);
+  color: var(--tm-danger);
+}
+.row {
+  display: flex;
+  gap: 0.625rem;
+}
+.field.grow {
+  flex: 1;
+}
+.field.w100 {
+  width: 6.25rem;
+}

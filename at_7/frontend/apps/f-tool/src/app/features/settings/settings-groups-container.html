@@ -1,0 +1,28 @@
+@if (errorMessage(); as msg) {
+  <p class="error">{{ msg }}</p>
+}
+
+<tm-settings-tabs [tabs]="tabs" [activeTab]="tab()" (tabChanged)="onTabChanged($event)">
+  @switch (tab()) {
+    @case ('ledger') {
+      
+      <tm-user-ledger
+        [users]="ledgerUsers()"
+        [totalCount]="total()"
+        [page]="page()"
+        [pageSize]="pageSize()"
+        [loading]="ledgerLoading()"
+        [predicates]="predicates()"
+        (predicatesChange)="onPredicatesChanged($event)"
+        (pageChanged)="onPageChanged($event)"
+        (pageSizeChanged)="onPageSizeChanged($event)"
+        (addFromAdClicked)="openAddFromAd()"
+        (rowClicked)="openUserDetail($event)"
+        (deleteClicked)="askDeleteUser($event)"
+      />
+    }
+    @default {
+      <tm-groups-section [tab]="tab() === 'tree' ? 'tree' : 'list'" (userSelected)="openUserDetail($event)" />
+    }
+  }
+</tm-settings-tabs>
