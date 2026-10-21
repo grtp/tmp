@@ -1,0 +1,40 @@
+<tm-data-table-page
+  [selectedTable]="title()"
+  [columns]="columnDefs()"
+  [rows]="displayRows()"
+  [totalCount]="totalCount()"
+  [page]="page()"
+  [pageSize]="pageSize()"
+  [loading]="loading()"
+  [canCreate]="false"
+  [showMultiSelect]="false"
+  [showCsvExport]="false"
+  [filterColumns]="filterColumns()"
+  [predicates]="predicates()"
+  storageKey="ftool.colw:users:ledger"
+  (predicatesChange)="predicatesChange.emit($event)"
+  (pageChanged)="pageChanged.emit($event)"
+  (pageSizeChanged)="pageSizeChanged.emit($event)"
+  (rowSelected)="onRowSelected($event)"
+>
+  
+  <button toolbarActions class="tm-btn primary" type="button" [attr.title]="t('users.addFromAd')" (click)="addFromAdClicked.emit()">
+    <mat-icon class="ic" aria-hidden="true">person_add</mat-icon> <span class="lbl">{{ t('users.addFromAd') }}</span>
+  </button>
+</tm-data-table-page>
+
+
+<ng-template #opsTpl let-row>
+  <button mat-icon-button class="icon-btn danger" type="button"
+    (click)="$event.stopPropagation(); deleteClicked.emit(rowOf(row)!.objectGuid)"
+    [attr.aria-label]="'users.deleteAria' | transloco"
+    [attr.title]="'users.deleteAria' | transloco">
+    <mat-icon class="ic" aria-hidden="true">person_remove</mat-icon>
+  </button>
+</ng-template>
+
+
+<ng-template #userTpl let-row>
+  <span class="user-name">{{ rowOf(row)?.displayName }}</span>
+  <span class="user-id mono"> {{ rowOf(row)?.username }}</span>
+</ng-template>

@@ -1,0 +1,11 @@
+USE ftool;
+GO
+SELECT code, name, sort_order FROM dbo.ftool_app_actions ORDER BY sort_order;
+SELECT a.code, ua.auth_level, u.username
+FROM dbo.ftool_app_user_auth ua
+JOIN dbo.ftool_app_actions a ON a.id = ua.action_id
+JOIN dbo.ftool_app_users u ON u.object_guid = ua.object_guid
+ORDER BY u.username, a.sort_order;
+SELECT COUNT(*) AS managed_tables FROM dbo.ftool_app_managed_tables;
+SELECT COUNT(*) AS connections FROM dbo.ftool_app_connections;
+GO

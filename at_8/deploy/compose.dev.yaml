@@ -1,0 +1,85 @@
+
+services:
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: ft-mssql
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Fidev01!"
+      MSSQL_PID: Developer
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P 'Fidev01!' -Q 'SELECT 1' -b"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  mssql-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: ft-mssql-init
+    depends_on:
+      mssql:
+        condition: service_healthy
+    volumes:
+      - ./initdb:/initdb:ro,z
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - "for i in $$(seq 1 60); do /opt/mssql-tools18/bin/sqlcmd -C -S mssql -U sa -P 'Fidev01!' -Q 'SELECT 1' -b && break; echo \"waiting for mssql ($$i)\"; sleep 2; done; cd /initdb && /opt/mssql-tools18/bin/sqlcmd -C -S mssql -U sa -P 'Fidev01!' -i 01_init.sql -b"
+    restart: "no"
+
+  ldap:
+    image: docker.io/smblds/smblds:latest
+    container_name: ft-ldap
+    environment:
+      REALM: EXAMPLE.LOCAL
+      DOMAIN: EXAMPLE
+      ADMINPASS: Fidev01!
+      INSECURE_LDAP: "true"
+      TZ: Asia/Tokyo
+    ports:
+      - "1389:389"
+      - "1636:636"
+    volumes:
+      - ./samba/entrypoint.d:/entrypoint.d:ro,z
+      - ./samba/data:/data/ftool:ro,z
+      - samba-data:/var/lib/samba
+      - samba-etc:/etc/samba
+
+  redis:
+    image: docker.io/valkey/valkey:8-alpine
+    container_name: ft-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: docker.io/minio/minio:latest
+    container_name: ft-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: devminio
+      MINIO_ROOT_PASSWORD: Fidev01!
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Web コンソール(開発確認用)
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  mssql-data:
+  samba-data:
+  samba-etc:
+  minio-data:

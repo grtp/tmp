@@ -1,0 +1,28 @@
+@if (errorMessage(); as msg) {
+  <p class="error">{{ msg }}</p>
+}
+
+@switch (tab()) {
+  @case ('list') {
+    <tm-groups-page
+      [groups]="settingsGroups()"
+      [loading]="loading()"
+      (addClicked)="openCreate()"
+      (editClicked)="openEdit($event)"
+      (deleteClicked)="askDelete($event)"
+    />
+  }
+  @case ('tree') {
+    
+    <tm-group-tree
+      [nodes]="treeNodes()"
+      [roots]="treeRoots()"
+      [rootId]="treeRootId()"
+      [loading]="loading()"
+      (rootChanged)="treeRootId.set($event)"
+      (editClicked)="openEdit($event)"
+      (userClicked)="userSelected.emit($event)"
+      (exportClicked)="openTreeExport()"
+    />
+  }
+}

@@ -1,0 +1,92 @@
+<div class="panel">
+  <div class="toolbar">
+    <label class="root-pick">
+      <span class="lbl">{{ 'groupTree.root' | transloco }}</span>
+      <select class="root-select" (change)="onRootChange($any($event.target).value)">
+        <option value="" [selected]="rootId() === null">{{ 'groupTree.allRoots' | transloco }}</option>
+        @for (r of roots(); track r.id) {
+          <option [value]="r.id" [selected]="rootId() === r.id">{{ r.name }} ({{ r.groupName }})</option>
+        }
+      </select>
+    </label>
+    <span class="spacer"></span>
+    
+    <button class="tm-btn" type="button" [disabled]="isEmpty()" (click)="exportClicked.emit()">
+      <mat-icon class="ic" aria-hidden="true">download</mat-icon>
+      <span class="lbl">{{ 'groupTree.export' | transloco }}</span>
+    </button>
+    <button class="tm-btn" type="button" (click)="expandAll()">
+      <mat-icon class="ic" aria-hidden="true">unfold_more</mat-icon>
+      <span class="lbl">{{ 'groupTree.expandAll' | transloco }}</span>
+    </button>
+    <button class="tm-btn" type="button" (click)="collapseAll()">
+      <mat-icon class="ic" aria-hidden="true">unfold_less</mat-icon>
+      <span class="lbl">{{ 'groupTree.collapseAll' | transloco }}</span>
+    </button>
+  </div>
+
+  <div class="tree-wrap">
+    @if (loading()) {
+      <p class="muted">{{ 'common.loading' | transloco }}</p>
+    } @else if (isEmpty()) {
+      <p class="muted">{{ 'groupTree.empty' | transloco }}</p>
+    } @else {
+      <ul class="tree root">
+        @for (n of nodes(); track n.id) {
+          <ng-container *ngTemplateOutlet="nodeTpl; context: { $implicit: n, path: '' }" />
+        }
+      </ul>
+    }
+  </div>
+</div>
+
+
+<ng-template #nodeTpl let-n let-path="path">
+  @if (n.kind === 'group') {
+    <li class="node group" [class.repeated]="n.repeated">
+      <div class="row">
+        @if (n.children.length > 0) {
+          <button class="twisty" type="button" (click)="toggle(key(path, n))"
+            [attr.aria-expanded]="!isCollapsed(key(path, n))">
+            <mat-icon class="ic" aria-hidden="true">{{ isCollapsed(key(path, n)) ? 'chevron_right' : 'expand_more' }}</mat-icon>
+          </button>
+        } @else {
+          <span class="twisty placeholder"></span>
+        }
+        <mat-icon class="ic kind-ic" aria-hidden="true">folder_shared</mat-icon>
+        
+        <button class="name name-btn" type="button" (click)="editClicked.emit(n.id)"
+          [attr.title]="'groupTree.edit' | transloco">{{ n.name }}</button>
+        <span class="sub mono">{{ n.groupName }}</span>
+        @if (n.rank !== null) {
+          <span class="sub rank">{{ 'groupTree.rank' | transloco: { n: n.rank } }}</span>
+        }
+        @if (n.repeated) {
+          <span class="badge repeated-badge">{{ 'groupTree.repeated' | transloco }}</span>
+        } @else {
+          <span class="sub">{{ 'groupTree.effective' | transloco: { n: n.effectiveUsers } }}</span>
+        }
+      </div>
+      @if (n.children.length > 0 && !isCollapsed(key(path, n))) {
+        <ul class="tree">
+          @for (c of n.children; track $index) {
+            <ng-container *ngTemplateOutlet="nodeTpl; context: { $implicit: c, path: key(path, n) }" />
+          }
+        </ul>
+      }
+    </li>
+  } @else {
+    <li class="node user">
+      <div class="row">
+        <span class="twisty placeholder"></span>
+        <mat-icon class="ic kind-ic user-ic" aria-hidden="true">person</mat-icon>
+        
+        <button class="name name-btn" type="button" (click)="userClicked.emit(n.id)"
+          [attr.title]="'users.detailTitle' | transloco">{{ n.name }}</button>
+        @if (n.username) {
+          <span class="sub mono">{{ n.username }}</span>
+        }
+      </div>
+    </li>
+  }
+</ng-template>
