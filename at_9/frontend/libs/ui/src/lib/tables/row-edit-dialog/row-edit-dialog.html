@@ -1,0 +1,139 @@
+
+<h2 mat-dialog-title class="head">
+  <span class="head-title">
+    <mat-icon class="ic" aria-hidden="true">{{ mode() === 'create' ? 'add' : 'edit' }}</mat-icon>
+    {{ (mode() === 'create' ? 'rowEdit.createTitle' : 'rowEdit.editTitle') | transloco }}
+  </span>
+  <button class="close" type="button" (click)="cancel()" [attr.aria-label]="'common.close' | transloco">
+    <mat-icon class="ic" aria-hidden="true">close</mat-icon>
+  </button>
+</h2>
+
+<mat-dialog-content class="body">
+  @if (errorMessage(); as msg) {
+    <p class="error">{{ msg }}</p>
+  }
+  @for (col of columns; track col.name) {
+    
+    <label class="field" [attr.for]="fieldId(col)">
+      <span class="label">
+        {{ labelOf(col) }}
+        @if (col.primaryKey) {
+          <span class="pk"><mat-icon class="ic" aria-hidden="true">key</mat-icon> ID</span>
+        }
+        @if (col.required && !col.readonly && !col.fixed) {
+          <span class="req">{{ 'common.required' | transloco }}</span>
+        }
+        @if (col.derived) {
+          <span class="ro"><mat-icon class="ic" aria-hidden="true">link</mat-icon> {{ 'rowEdit.lookupBadge' | transloco }}</span>
+        } @else if (col.fixed) {
+          <span class="ro">{{ 'rowEdit.fixedBadge' | transloco }}</span>
+        } @else if (col.readonly) {
+          <span class="ro">{{ 'common.readonly' | transloco }}</span>
+        }
+        @if (pickersFor(col); as picks) {
+          @if (picks.length > 0) {
+            
+            <span class="picks">
+              <span class="picks-label">{{ 'rowEdit.pickFrom' | transloco }}</span>
+              @for (lk of picks; track lk.index; let n = $index) {
+                <button
+                  class="btn small pick"
+                  type="button"
+                  [disabled]="isLocked(col) || saving()"
+                  [attr.title]="'rowEdit.lookupPick' | transloco: { label: lk.label }"
+                  [attr.aria-label]="'rowEdit.lookupPick' | transloco: { label: lk.label }"
+                  (click)="$event.preventDefault(); lookupPickRequested.emit(lk.index)"
+                >{{ n + 1 }}</button>
+              }
+            </span>
+          }
+        }
+      </span>
+      @switch (col.type) {
+        @case ('bool') {
+          <input
+            [id]="fieldId(col)"
+            type="checkbox"
+            class="check"
+            [checked]="asBool(draft()[col.name])"
+            [disabled]="isLocked(col) || saving()"
+            (change)="set(col.name, $any($event.target).checked)"
+          />
+        }
+        @case ('int') {
+          <input
+            [id]="fieldId(col)"
+            type="number"
+            step="1"
+            class="input"
+            [value]="asText(draft()[col.name])"
+            [disabled]="isLocked(col) || saving()"
+            (input)="setNumber(col.name, $any($event.target).value)"
+          />
+        }
+        @case ('decimal') {
+          <input
+            [id]="fieldId(col)"
+            type="number"
+            step="any"
+            class="input"
+            [value]="asText(draft()[col.name])"
+            [disabled]="isLocked(col) || saving()"
+            (input)="setNumber(col.name, $any($event.target).value)"
+          />
+        }
+        @case ('date') {
+          <input
+            [id]="fieldId(col)"
+            type="date"
+            class="input"
+            [value]="asDate(draft()[col.name])"
+            [disabled]="isLocked(col) || saving()"
+            (input)="setText(col.name, $any($event.target).value)"
+          />
+        }
+        @case ('datetime') {
+          <input
+            [id]="fieldId(col)"
+            type="datetime-local"
+            class="input"
+            [value]="asDateTime(draft()[col.name])"
+            [disabled]="isLocked(col) || saving()"
+            (input)="setText(col.name, $any($event.target).value)"
+          />
+        }
+        @default {
+          <input
+            [id]="fieldId(col)"
+            type="text"
+            class="input"
+            [attr.maxlength]="col.maxLength ?? null"
+            [value]="asText(draft()[col.name])"
+            [disabled]="isLocked(col) || saving()"
+            (input)="setText(col.name, $any($event.target).value)"
+          />
+        }
+      }
+    </label>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions class="foot">
+  @if (mode() === 'edit' && canDelete) {
+    <button class="btn danger" type="button" [disabled]="saving()" (click)="deleteClicked.emit()">
+      <mat-icon class="ic" aria-hidden="true">delete</mat-icon> {{ 'common.delete' | transloco }}
+    </button>
+    
+    <button class="btn warn" type="button" [disabled]="saving()" (click)="duplicate()">
+      <mat-icon class="ic" aria-hidden="true">content_copy</mat-icon> {{ 'rowEdit.duplicate' | transloco }}
+    </button>
+  }
+  <span class="spacer"></span>
+  <button class="btn" type="button" [disabled]="saving()" (click)="cancel()">
+    {{ 'common.cancel' | transloco }}
+  </button>
+  <button class="btn primary" type="button" [disabled]="saving() || !canSave()" (click)="save()">
+    {{ (saving() ? 'common.saving' : 'common.save') | transloco }}
+  </button>
+</mat-dialog-actions>

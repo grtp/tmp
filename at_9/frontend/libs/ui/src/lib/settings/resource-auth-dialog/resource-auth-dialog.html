@@ -1,0 +1,68 @@
+<h2 mat-dialog-title class="head">
+  <span class="head-title">
+    <mat-icon class="ic" aria-hidden="true">lock_person</mat-icon>
+    {{ 'resourceAuthDialog.title' | transloco: { name: title } }}
+  </span>
+  <button class="close" type="button" (click)="close()" [attr.aria-label]="'common.close' | transloco">
+    <mat-icon class="ic" aria-hidden="true">close</mat-icon>
+  </button>
+</h2>
+
+<mat-dialog-content class="body">
+  @if (errorMessage(); as msg) {
+    <p class="error">{{ msg }}</p>
+  }
+  
+  <div class="list-head">
+    <p class="pane-title">{{ 'resourceAuthDialog.granted' | transloco }}</p>
+    <button class="btn small primary add-btn" type="button" [disabled]="loading() || saving()" (click)="addClicked.emit()">
+      <mat-icon class="ic" aria-hidden="true">group_add</mat-icon>
+      {{ 'resourceAuthDialog.addSubject' | transloco }}
+    </button>
+  </div>
+  @if (loading()) {
+    <p class="muted">{{ 'common.loading' | transloco }}</p>
+  } @else if (entries().length === 0) {
+    <p class="muted">{{ 'resourceAuthDialog.noGrants' | transloco }}</p>
+  } @else {
+    <ul class="entries">
+      @for (e of entries(); track subjectKey(e)) {
+        <li class="entry">
+          <mat-icon class="ic kind-ic" [class.group]="e.subjectKind === 'group'" aria-hidden="true">
+            {{ e.subjectKind === 'group' ? 'folder_shared' : 'person' }}
+          </mat-icon>
+          <span class="subject-name" [attr.title]="e.name">{{ e.name }}</span>
+          <span class="subject-id mono" [attr.title]="e.username ?? null">{{ e.username ?? '' }}</span>
+          @if (!singleLevel) {
+            <button
+              class="level-btn"
+              type="button"
+              [class.rw]="e.authLevel === 'rw'"
+              [disabled]="saving()"
+              [attr.title]="'resourceAuthDialog.toggleLevel' | transloco"
+              (click)="toggleLevel(e)"
+            >
+              {{ (e.authLevel === 'rw' ? 'resourceAuthDialog.levelRw' : 'resourceAuthDialog.levelR') | transloco }}
+            </button>
+          }
+          <button
+            class="icon-btn danger"
+            type="button"
+            [disabled]="saving()"
+            [attr.aria-label]="'resourceAuthDialog.removeAria' | transloco"
+            [attr.title]="'resourceAuthDialog.removeAria' | transloco"
+            (click)="remove(e)"
+          >
+            <mat-icon class="ic" aria-hidden="true">close</mat-icon>
+          </button>
+        </li>
+      }
+    </ul>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions class="foot">
+  <button class="btn" type="button" [disabled]="saving()" (click)="close()">
+    {{ 'common.close' | transloco }}
+  </button>
+</mat-dialog-actions>

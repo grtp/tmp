@@ -1,0 +1,83 @@
+<h2 mat-dialog-title class="head">
+  <span class="head-title">
+    <mat-icon class="ic" aria-hidden="true">person_add</mat-icon>
+    {{ 'directoryAdd.title' | transloco }}
+  </span>
+  <button class="close" type="button" (click)="close()" [attr.aria-label]="'common.close' | transloco">
+    <mat-icon class="ic" aria-hidden="true">close</mat-icon>
+  </button>
+</h2>
+
+<mat-dialog-content class="body">
+  
+  <p class="hint">
+    {{ 'directoryAdd.hint' | transloco: { n: limit() } }}
+    @if (truncated()) {
+      <span class="truncated">{{ 'directoryAdd.truncated' | transloco }}</span>
+    }
+  </p>
+  @if (errorMessage(); as msg) {
+    <p class="error">{{ msg }}</p>
+  }
+
+  <div class="search-row">
+    <input
+      class="input search"
+      type="search"
+      [placeholder]="'directoryAdd.searchPlaceholder' | transloco"
+      [value]="query()"
+      (input)="query.set($any($event.target).value)"
+      (keydown.enter)="search()"
+    />
+    <button class="tm-btn" type="button" [disabled]="!canSearch()" (click)="search()">
+      <mat-icon class="ic" aria-hidden="true">{{ searching() ? 'hourglass_top' : 'search' }}</mat-icon>
+      <span class="lbl">{{ 'directoryAdd.search' | transloco }}</span>
+    </button>
+  </div>
+
+  @if (results(); as list) {
+    <ul class="candidates" role="listbox" aria-multiselectable="true">
+      @for (r of list; track r.objectGuid) {
+        <li>
+          <button
+            class="candidate"
+            type="button"
+            role="option"
+            [class.selected]="isSelected(r)"
+            [class.registered]="r.registered"
+            [attr.aria-selected]="isSelected(r)"
+            [disabled]="r.registered || saving()"
+            (click)="select(r)"
+          >
+            <mat-icon class="ic kind-ic" aria-hidden="true">person</mat-icon>
+            <span class="subject-name">{{ r.displayName }}</span>
+            <span class="subject-id mono">{{ r.username }}</span>
+            <span class="subject-dept" [attr.title]="r.department ?? ''">{{ r.department ?? '' }}</span>
+            @if (r.registered) {
+              <span class="badge">{{ 'directoryAdd.registered' | transloco }}</span>
+            } @else if (isSelected(r)) {
+              <mat-icon class="ic check-ic" aria-hidden="true">check</mat-icon>
+            }
+          </button>
+        </li>
+      } @empty {
+        <li class="muted empty">{{ 'directoryAdd.noResults' | transloco }}</li>
+      }
+    </ul>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions class="foot">
+  <span class="selected-hint">
+    @if (selected().length > 0) {
+      {{ 'directoryAdd.selectedCount' | transloco: { n: selected().length } }}
+    }
+  </span>
+  <span class="spacer"></span>
+  <button class="btn" type="button" [disabled]="saving()" (click)="close()">
+    {{ 'common.cancel' | transloco }}
+  </button>
+  <button class="btn primary" type="button" [disabled]="!canAdd()" (click)="add()">
+    {{ (saving() ? 'common.saving' : 'directoryAdd.add') | transloco }}
+  </button>
+</mat-dialog-actions>

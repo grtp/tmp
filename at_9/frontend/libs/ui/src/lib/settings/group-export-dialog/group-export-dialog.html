@@ -1,0 +1,49 @@
+
+<h2 mat-dialog-title class="head">
+  <span class="head-title">
+    <mat-icon class="ic" aria-hidden="true">download</mat-icon>
+    {{ 'groupExport.title' | transloco }}
+  </span>
+  <button class="close" type="button" (click)="cancel()" [attr.aria-label]="'common.close' | transloco">
+    <mat-icon class="ic" aria-hidden="true">close</mat-icon>
+  </button>
+</h2>
+
+<mat-dialog-content class="body">
+  <button class="entry" type="button" [disabled]="busy()" (click)="choose('json')">
+    <mat-icon class="entry-icon ic" aria-hidden="true">data_object</mat-icon>
+    <span class="entry-text">
+      <span class="entry-name">{{ 'groupExport.json' | transloco }}</span>
+    </span>
+  </button>
+
+  <label class="check-field">
+    <input type="checkbox" [checked]="excelCompat()" (change)="excelCompat.set($any($event.target).checked)" />
+    <span>{{ 'csvExport.excelCompat' | transloco }}</span>
+  </label>
+
+  <button class="entry" type="button" [disabled]="busy()" (click)="choose('csv')">
+    <mat-icon class="entry-icon ic" aria-hidden="true">download</mat-icon>
+    <span class="entry-text">
+      <span class="entry-name">{{ 'groupExport.csv' | transloco }}</span>
+    </span>
+  </button>
+
+  
+  <button class="entry" type="button" [disabled]="busy() || !rankAvailable()" (click)="choose('csvRank')"
+    [attr.title]="rankAvailable() ? null : ('groupExport.csvRankUnavailable' | transloco)">
+    <mat-icon class="entry-icon ic" aria-hidden="true">view_column</mat-icon>
+    <span class="entry-text">
+      <span class="entry-name">{{ 'groupExport.csvRank' | transloco }}</span>
+      @if (!rankAvailable()) {
+        <span class="entry-desc">{{ 'groupExport.csvRankUnavailable' | transloco }}</span>
+      }
+    </span>
+  </button>
+</mat-dialog-content>
+
+<mat-dialog-actions class="foot">
+  <button class="btn" type="button" [disabled]="busy()" (click)="cancel()">
+    {{ 'common.cancel' | transloco }}
+  </button>
+</mat-dialog-actions>

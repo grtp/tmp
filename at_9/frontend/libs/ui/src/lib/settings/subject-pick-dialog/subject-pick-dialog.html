@@ -1,0 +1,96 @@
+<h2 mat-dialog-title class="head">
+  <span class="head-title">
+    <mat-icon class="ic" aria-hidden="true">group_add</mat-icon>
+    {{ titleKey | transloco }}
+    <span class="target-name" [attr.title]="name">{{ name }}</span>
+  </span>
+  <button class="close" type="button" (click)="close()" [attr.aria-label]="'common.close' | transloco">
+    <mat-icon class="ic" aria-hidden="true">close</mat-icon>
+  </button>
+</h2>
+
+<mat-dialog-content class="body">
+  @if (errorMessage(); as msg) {
+    <p class="error">{{ msg }}</p>
+  }
+
+  <div class="tool-row">
+    <div class="kind-switch" role="tablist">
+      <button type="button" class="kind-btn" role="tab"
+        [class.active]="kindFilter() === 'user'" [attr.aria-selected]="kindFilter() === 'user'"
+        (click)="setKind('user')">
+        <mat-icon class="ic" aria-hidden="true">person</mat-icon>
+        {{ 'resourceAuthDialog.kindUser' | transloco }}
+      </button>
+      <button type="button" class="kind-btn" role="tab"
+        [class.active]="kindFilter() === 'group'" [attr.aria-selected]="kindFilter() === 'group'"
+        (click)="setKind('group')">
+        <mat-icon class="ic" aria-hidden="true">folder_shared</mat-icon>
+        {{ 'resourceAuthDialog.kindGroup' | transloco }}
+      </button>
+    </div>
+    <input
+      class="input search"
+      type="search"
+      [placeholder]="(kindFilter() === 'user' ? 'subjectPick.searchPlaceholder' : 'resourceAuthDialog.searchPlaceholder') | transloco"
+      [value]="query()"
+      (input)="onQueryInput($any($event.target).value)"
+      (keydown.enter)="search()"
+    />
+    <button class="tm-btn" type="button" [disabled]="!canSearch()" (click)="search()">
+      <mat-icon class="ic" aria-hidden="true">{{ searching() ? 'hourglass_top' : 'search' }}</mat-icon>
+      <span class="lbl">{{ 'directoryAdd.search' | transloco }}</span>
+    </button>
+  </div>
+  
+  @if (kindFilter() === 'user' && truncated()) {
+    <p class="hint truncated">{{ 'subjectPick.truncated' | transloco: { n: limit() } }}</p>
+  }
+
+  @if (searching() && userResults() === null) {
+    <p class="muted">{{ 'common.loading' | transloco }}</p>
+  } @else {
+    <ul class="candidates" role="listbox" aria-multiselectable="true">
+      @for (s of filteredCandidates(); track subjectKey(s)) {
+        <li>
+          <button
+            class="candidate"
+            type="button"
+            role="option"
+            [class.selected]="isSelected(s)"
+            [attr.aria-selected]="isSelected(s)"
+            [disabled]="saving()"
+            (click)="toggle(s)"
+          >
+            <mat-icon class="ic kind-ic" [class.group]="s.subjectKind === 'group'" aria-hidden="true">
+              {{ s.subjectKind === 'group' ? 'folder_shared' : 'person' }}
+            </mat-icon>
+            <span class="subject-name">{{ s.name }}</span>
+            <span class="subject-id mono">{{ s.username ?? '' }}</span>
+            <span class="subject-dept" [attr.title]="s.department ?? ''">{{ s.department ?? '' }}</span>
+            @if (isSelected(s)) {
+              <mat-icon class="ic check-ic" aria-hidden="true">check</mat-icon>
+            }
+          </button>
+        </li>
+      } @empty {
+        <li class="muted empty">{{ 'resourceAuthDialog.noCandidates' | transloco }}</li>
+      }
+    </ul>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions class="foot">
+  <span class="selected-hint">
+    @if (selected().length > 0) {
+      {{ 'subjectPick.selectedCount' | transloco: { n: selected().length } }}
+    }
+  </span>
+  <span class="spacer"></span>
+  <button class="btn" type="button" [disabled]="saving()" (click)="close()">
+    {{ 'common.cancel' | transloco }}
+  </button>
+  <button class="btn primary" type="button" [disabled]="!canAdd()" (click)="add()">
+    {{ (saving() ? 'common.saving' : 'subjectPick.add') | transloco }}
+  </button>
+</mat-dialog-actions>

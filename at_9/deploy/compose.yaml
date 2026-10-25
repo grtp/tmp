@@ -1,0 +1,155 @@
+networks:
+  default:
+    ipam:
+      config:
+      - subnet: 10.89.0.0/24
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    container_name: ft-backend
+    depends_on:
+      ldap:
+        condition: service_started
+      mssql:
+        condition: service_started
+      redis:
+        condition: service_started
+    env_file:
+    - .env
+    environment:
+      ADDR: :8080
+      LDAP_URL: ldap://ldap:389
+      MINIO_ENDPOINT: minio:9000
+      MSSQL_DSN: sqlserver://sa:Fidev01!@mssql:1433?database=ftool
+      REDIS_ADDR: redis:6379
+    expose:
+    - '8080'
+    image: localhost/ftool-backend:latest
+    restart: unless-stopped
+  frontend:
+    build:
+      args:
+      - IMAGE_TAG=latest
+      context: ..
+      dockerfile: frontend/Dockerfile
+    container_name: ft-frontend
+    depends_on:
+      backend:
+        condition: service_started
+    image: localhost/ftool-frontend:latest
+    ports:
+    - 127.0.0.1:8081:80
+    restart: unless-stopped
+    volumes:
+    - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro,z
+  ldap:
+    container_name: ft-ldap
+    environment:
+      ADMINPASS: Fidev01!
+      DOMAIN: EXAMPLE
+      INSECURE_LDAP: 'true'
+      REALM: EXAMPLE.LOCAL
+      TZ: Asia/Tokyo
+    image: docker.io/smblds/smblds:latest
+    ports:
+    - 1389:389
+    - 1636:636
+    volumes:
+    - ./samba/entrypoint.d:/entrypoint.d:ro,z
+    - ./samba/data:/data/ftool:ro,z
+    - samba-data:/var/lib/samba
+    - samba-etc:/etc/samba
+  minio:
+    command:
+    - server
+    - /data
+    - --console-address
+    - :9001
+    container_name: ft-minio
+    environment:
+      MINIO_ROOT_PASSWORD: Fidev01!
+      MINIO_ROOT_USER: devminio
+    expose:
+    - '9000'
+    - '9001'
+    healthcheck:
+      interval: 5s
+      retries: 10
+      test:
+      - CMD
+      - mc
+      - ready
+      - local
+      timeout: 5s
+    image: docker.io/minio/minio:latest
+    ports:
+    - 9000:9000
+    - 9001:9001
+    restart: unless-stopped
+    volumes:
+    - minio-data:/data
+  mssql:
+    container_name: ft-mssql
+    environment:
+      ACCEPT_EULA: Y
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: Fidev01!
+    healthcheck:
+      interval: 5s
+      retries: 20
+      test:
+      - CMD-SHELL
+      - /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P 'Fidev01!' -Q 'SELECT
+        1' -b
+      timeout: 5s
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    ports:
+    - 1433:1433
+    volumes:
+    - mssql-data:/var/opt/mssql
+  mssql-init:
+    command:
+    - -c
+    - for i in $$(seq 1 60); do /opt/mssql-tools18/bin/sqlcmd -C -S mssql -U sa -P
+      'Fidev01!' -Q 'SELECT 1' -b && break; echo "waiting for mssql ($$i)"; sleep 2;
+      done; cd /initdb && /opt/mssql-tools18/bin/sqlcmd -C -S mssql -U sa -P 'Fidev01!'
+      -i init.sql -b
+    container_name: ft-mssql-init
+    depends_on:
+      mssql:
+        condition: service_healthy
+    entrypoint:
+    - /bin/bash
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    restart: 'no'
+    volumes:
+    - ./initdb:/initdb:ro,z
+  redis:
+    command:
+    - valkey-server
+    - --save
+    - ''
+    - --appendonly
+    - 'no'
+    container_name: ft-redis
+    expose:
+    - '6379'
+    healthcheck:
+      interval: 5s
+      retries: 10
+      test:
+      - CMD
+      - valkey-cli
+      - ping
+      timeout: 3s
+    image: docker.io/valkey/valkey:8-alpine
+    ports:
+    - 6379:6379
+    restart: unless-stopped
+volumes:
+  minio-data: null
+  mssql-data: null
+  samba-data: null
+  samba-etc: null

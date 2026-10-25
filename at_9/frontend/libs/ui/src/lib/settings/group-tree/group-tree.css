@@ -1,0 +1,191 @@
+
+:host {
+  display: contents;
+}
+
+.panel {
+  flex: 1;
+  min-height: 0;
+  margin: 1rem;
+  display: flex;
+  flex-direction: column;
+  background: var(--tm-surface);
+  border: 1px solid var(--tm-border);
+  border-radius: var(--tm-radius);
+  overflow: hidden;
+}
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--tm-border);
+  flex-shrink: 0;
+}
+.toolbar .tm-btn {
+  flex: none;
+  white-space: nowrap;
+}
+.spacer {
+  flex: 1;
+}
+
+.root-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  color: var(--tm-text-secondary);
+  flex: none;
+  white-space: nowrap;
+}
+.root-select {
+  height: 2rem;
+  width: 16rem;
+  max-width: 40vw;
+  text-overflow: ellipsis;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  border: 1px solid var(--tm-border);
+  border-radius: var(--tm-radius);
+  padding: 0 0.5rem;
+  background: var(--tm-surface);
+  color: var(--tm-text);
+}
+.tree-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.5rem 0.75rem;
+}
+.muted {
+  color: var(--tm-text-muted);
+  font-size: 0.8125rem;
+  padding: 1rem 0;
+  text-align: center;
+}
+
+
+.tree {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tree .tree {
+  margin-left: 1.5rem;
+  padding-left: 0.75rem;
+}
+.tree .tree > .node {
+  position: relative;
+}
+.tree .tree > .node::before {
+  
+  content: "";
+  position: absolute;
+  left: -0.75rem;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid var(--tm-border-strong, var(--tm-border));
+}
+.tree .tree > .node:last-child::before {
+  bottom: auto;
+  height: 0.9375rem; 
+}
+.tree .tree > .node::after {
+  
+  content: "";
+  position: absolute;
+  left: -0.75rem;
+  top: 0.9375rem;
+  width: 0.625rem;
+  border-top: 1px solid var(--tm-border-strong, var(--tm-border));
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 1.875rem;
+  padding: 0 0.25rem;
+  border-radius: var(--tm-radius);
+}
+.row:hover {
+  background: var(--tm-primary-tint-weak, var(--tm-primary-tint));
+}
+.twisty {
+  width: 1.25rem;
+  height: 1.25rem;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  color: var(--tm-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.twisty .ic {
+  font-size: 1.125rem;
+}
+.twisty.placeholder {
+  cursor: default;
+}
+.kind-ic {
+  font-size: 1rem;
+  color: var(--tm-primary);
+  flex: none;
+}
+.kind-ic.user-ic {
+  color: var(--tm-text-secondary);
+}
+.name {
+  font-size: 0.8125rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.group > .row .name {
+  font-weight: 600;
+}
+.sub {
+  font-size: 0.6875rem;
+  color: var(--tm-text-muted);
+}
+.badge {
+  font-size: 0.6875rem;
+  color: var(--tm-text-secondary);
+  border: 1px solid var(--tm-border);
+  border-radius: 0.1875rem;
+  padding: 0 0.375rem;
+  white-space: nowrap;
+  flex: none;
+}
+.repeated-badge {
+  color: var(--tm-text-muted);
+  border-style: dashed;
+}
+.node.repeated > .row .name {
+  color: var(--tm-text-muted);
+  font-weight: 400;
+}
+
+.name-btn {
+  border: none;
+  background: transparent;
+  padding: 0;
+  
+  font-family: inherit;
+  line-height: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  border-radius: var(--tm-radius);
+}
+.name-btn:hover,
+.name-btn:focus-visible {
+  color: var(--tm-primary);
+  text-decoration: underline;
+  outline: none;
+}
