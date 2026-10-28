@@ -1,8 +1,0 @@
-log:
-  level: info
-runner:
-  labels:
-    - "ftool-ci:docker://localhost/ftool-ci:latest"
-container:
-  network: ftci
-  privileged: false

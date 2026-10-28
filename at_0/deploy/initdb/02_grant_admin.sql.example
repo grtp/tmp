@@ -1,0 +1,20 @@
+USE ftool;
+GO
+
+DECLARE @username NVARCHAR(256) = N'local';   -- ← 付与したいユーザーの username に変更
+
+MERGE dbo.ftool_app_user_auth AS t
+USING (
+    SELECT u.object_guid, a.id AS action_id
+    FROM dbo.ftool_app_users u
+    CROSS JOIN dbo.ftool_app_actions a
+    WHERE u.username = @username
+      AND a.code IN (N'tables', N'settings', N'history')
+) AS s
+ON t.object_guid = s.object_guid AND t.action_id = s.action_id
+WHEN MATCHED THEN
+    UPDATE SET auth_level = N'admin', updated_by = N'setup:grant_admin', updated_at = SYSUTCDATETIME()
+WHEN NOT MATCHED THEN
+    INSERT (object_guid, action_id, auth_level, created_by, updated_by)
+    VALUES (s.object_guid, s.action_id, N'admin', N'setup:grant_admin', N'setup:grant_admin');
+GO

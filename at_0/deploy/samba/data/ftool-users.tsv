@@ -1,0 +1,34 @@
+local	local	-	local	000001	local@example.local	管理本部情報システム部	担当	000001
+suzuki	Jiro	Suzuki	Jiro Suzuki	000002	suzuki@example.local	管理本部情報システム部	主任	000002
+sato	Hanako	Sato	Hanako Sato	000003	sato@example.local	営業本部営業一部一課	担当	000003
+tanaka	Taro	Tanaka	田中 太郎	100001	tanaka@example.local	営業本部	本部長	100001
+yamada	Ichiro	Yamada	山田 一郎	100002	yamada@example.local	営業本部営業一部	部長	100002
+takahashi	Kenji	Takahashi	高橋 健二	100003	takahashi@example.local	営業本部営業一部一課	課長	100003 課長
+watanabe	Yumi	Watanabe	渡辺 由美	100004	watanabe@example.local	営業本部営業一部一課	主任	100004
+ito	Shota	Ito	伊藤 翔太	100005	ito@example.local	営業本部営業一部一課	担当	a00005
+nakamura	Aya	Nakamura	中村 彩	100006	nakamura@example.local	営業本部営業一部一課	担当	社員 100006
+kobayashi	Daisuke	Kobayashi	小林 大輔	100007	kobayashi@example.local	営業本部営業一部二課	課長	100007
+kato	Miki	Kato	加藤 美紀	100008	kato@example.local	営業本部営業一部二課	主任	100008
+yoshida	Ryo	Yoshida	吉田 亮	100009	yoshida@example.local	営業本部営業一部二課	担当	100009
+yamamoto	Nao	Yamamoto	山本 奈緒	100010	yamamoto@example.local	営業本部営業一部二課	担当	100010
+sasaki	Koji	Sasaki	佐々木 浩二	100011	sasaki@example.local	営業本部営業二部	部長	100011
+matsumoto	Rina	Matsumoto	松本 里奈	100012	matsumoto@example.local	営業本部営業二部一課	課長	100012
+inoue	Takuya	Inoue	井上 拓也	100013	inoue@example.local	営業本部営業二部一課	担当	100013
+kimura	Saki	Kimura	木村 咲	100014	kimura@example.local	営業本部営業二部一課	担当	100014
+hayashi	Makoto	Hayashi	林 誠	100015	hayashi@example.local	技術本部	本部長	100015
+shimizu	Yuki	Shimizu	清水 有紀	100016	shimizu@example.local	技術本部開発部	部長	100016
+yamazaki	Hiroshi	Yamazaki	山崎 浩	100017	yamazaki@example.local	技術本部開発部一課	課長	100017
+mori	Kana	Mori	森 佳奈	100018	mori@example.local	技術本部開発部一課	主任	100018
+abe	Sho	Abe	阿部 翔	100019	abe@example.local	技術本部開発部一課	担当	100019
+ikeda	Mai	Ikeda	池田 舞	100020	ikeda@example.local	技術本部開発部一課	担当	100020
+hashimoto	Yuta	Hashimoto	橋本 悠太	100021	hashimoto@example.local	技術本部開発部二課	課長	100021
+ishikawa	Emi	Ishikawa	石川 恵美	100022	ishikawa@example.local	技術本部開発部二課	主任	100022
+ogawa	Kazuki	Ogawa	小川 和樹	100023	ogawa@example.local	技術本部開発部二課	担当	100023
+maeda	Haruka	Maeda	前田 遥	100024	maeda@example.local	技術本部品質保証部	部長	100024
+okada	Tomoya	Okada	岡田 智也	100025	okada@example.local	技術本部品質保証部	主任	100025
+hasegawa	Mio	Hasegawa	長谷川 美緒	100026	hasegawa@example.local	技術本部品質保証部	担当	100026
+fujita	Kenta	Fujita	藤田 健太	100027	fujita@example.local	管理本部総務部	部長	100027
+goto	Ayumi	Goto	後藤 歩美	100028	goto@example.local	管理本部総務部	担当	派遣スタッフ
+kondo	Satoshi	Kondo	近藤 聡	100029	kondo@example.local	管理本部人事部	課長	100029
+murakami	Chie	Murakami	村上 千恵	100030	murakami@example.local	管理本部人事部	担当	100030
+nishimura	Akira	Nishimura	西村 明	100031	nishimura@example.local	管理本部経理部	課長	100031
