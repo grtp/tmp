@@ -10,7 +10,6 @@ IF SCHEMA_ID(N'dbo') IS NULL
     EXEC(N'CREATE SCHEMA [dbo]');
 GO
 
-
 IF OBJECT_ID(N'dbo.ftool_app_users', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.ftool_app_users (
@@ -452,8 +451,6 @@ BEGIN
     DROP TABLE dbo.ftool_app_home_config;
 END
 GO
-
-
 
 IF OBJECT_ID(N'dbo.products', N'U') IS NULL
 BEGIN
